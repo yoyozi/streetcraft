@@ -1,0 +1,233 @@
+.pops {
+    grid-row: 4 / 5;
+    grid-column: 1 / -1;
+    background-color: $color-primary-light;
+    padding-bottom: 3rem;
+
+.modal {
+    display: none;
+    position: fixed; /* Stay in place */
+    z-index: 1900; /* Sit on top */
+    padding: 2rem; /* Location of the box */
+    // padding-bottom: 2rem;
+    left: 0;
+    top: 4rem;
+    // width: 20rem;
+    width: 100%; /* Full width */
+    // max-width: 20rem;
+    height: 65%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: $color-primary-dark;
+    // background-color: rgba(0,0,0,0.9); /* Black w/ opacity */
+
+    &__img {
+        height: 80%;
+        width: 80%;
+        align-self: center;
+        justify-self: center;
+    }
+}
+
+.modal-content {
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 2rem;
+    right: 4rem;
+    font-size: 8rem;
+    font-weight: 700;
+    z-index: 2000;
+    color: #fff;
+    cursor: pointer;
+}
+
+    
+
+.thumbnails {
+    display: grid;
+    grid-template-columns: repaeat(4, minmax(min-content, max-content));
+    grid-template-rows: min-content;
+    justify-content:space-evenly;
+    // background-color: $color-primary-dark;
+
+    &__thumb {
+        width: 100%;
+        color: white;
+        border: 0;
+        max-width: 160px;
+        height: 120px;
+        border-radius: 5px;
+    }
+
+    &__one {
+        grid-column: 1 / 2;
+    }
+
+    &__two {
+        grid-column: 2 / 3;
+    }
+
+    &__three {
+        grid-column: 3 / 4;
+    }
+
+    &__four {
+        grid-column: 4 / 5;
+    }
+
+
+    &__beadwork {
+        width: 100%;
+        //display: block;
+
+        color: white;
+        border: 0;
+        // padding: 6px 6px 6px 0px;
+        max-width: 160px;
+        height: 120px;
+        // border: 6px solid $color-primary-light;
+        border-left: 6px solid orange;
+        border-radius: 5px;
+    }
+    
+    &__fabric {
+        width: 100%;
+        //display: block;
+
+        color: white;
+        border: 0;
+        // padding: 6px 6px 6px 0px;
+        max-width: 160px;
+        height: 120px;
+        // border: 6px solid $color-primary-light;
+        border-left: 6px solid green;
+
+        border-radius: 5px;
+    }
+    
+    &__hair {
+        width: 100%;
+        color: white;
+        border: 0;
+        max-width: 160px;
+        height: 120px;
+        border-left: 6px solid #666;
+        border-radius: 5px;
+    }
+
+    &__fencing {
+        width: 100%;
+        color: white;
+        border: 0;
+        max-width: 160px;
+        height: 120px;
+        border-left: 6px solid red;
+        border-radius: 5px;
+    }
+
+    &__artwork {
+        width: 100%;
+        color: white;
+        border: 0;
+        max-width: 160px;
+        height: 120px;
+        border-left: 6px solid yellow;
+        border-radius: 5px;
+    }
+
+    &__leatherwork {
+        width: 100%;
+        color: white;
+        border: 0;
+        max-width: 160px;
+        height: 120px;
+        border-left: 6px solid brown;
+        border-radius: 5px;
+    }
+}
+
+}
+
+
+// ul {
+// 	display: flex;
+// }
+
+// li {
+// 	list-style-type: none;
+// 	// padding: 6px;
+// 	// position: relative;
+// }
+
+// .large {
+// 	position: absolute;
+// 	left: -9999px;
+// }
+
+// li:hover .large {
+//     z-index: 1150;
+// 	left: 20px;
+// 	top: 150px;
+// }
+
+// .large-image {
+//     border-radius: 4px;
+//     box-shadow: 1px 1px 3px 3px rgba(127, 127, 127, 0.15);
+//     width: 60%;
+// }
+
+// .image{
+//     display: block;
+//     margin: 20px;
+//     background: crimson;
+//     color: white;
+//     border: 0;
+//     padding: 6px 10px;
+//     width: 100%;
+//     /* top bottom then left and right */
+// }
+// .popup-wrapper{
+//     background: rgba(0,0,0,0.5);
+//     /* background is 50% transparent */
+//     position: fixed;
+//     top: 0;
+//     left: 0;
+//     width: auto;
+//     // height: 100%;
+//     display: none;
+//     z-index: 92;
+// }
+
+// .popup{
+//     font-family: arial;
+//     text-align: center;
+//     // width: auto;
+//     // max-width: 300px;
+//     margin: 10% 10%;
+//     /* margin 10% top and bottom and auto l and R */
+//     padding: 20px;
+//     background: white;
+//     position: relative;
+// }
+
+// /* .popup anchor tag */
+// .popup a{
+//     background: crimson;
+//     color: white;
+//     text-decoration: none;
+//     padding: 6px 10px;
+// }
+
+// /* the close cross relative to the relative popup */
+// .popup-close{
+//     position: absolute;
+//     top: 5px;
+//     right: 8px;
+//     cursor: pointer;
+// }
+
+// .popup-image {
+//     width: 100%;
+// }

@@ -2,7 +2,7 @@
 
 Language: Javascript
 Framework: Vanilla JS static (changes in future)
-Package management: WebPack
+Package management: Parcel bundler
 
 ### To build
 

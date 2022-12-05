@@ -1,0 +1,50 @@
+
+*,
+*::after,
+*::before {
+    margin: 0;
+    padding: 0;
+    box-sizing: inherit;
+}
+
+html {
+    // This defines what 1rem is
+    font-size: 62.5%; //1 rem = 10px; 10px/16px = 62.5%
+
+
+}
+
+body {
+    box-sizing: border-box;
+    padding: 0rem;
+
+    font-family: "Lato", sans-serif;
+    // font-family: "Nunito", sans-serif;
+    // font-family: "Kalam", sans-serif;
+    font-weight: 400;
+    /*font-size: 16px;*/
+    line-height: 1.7;
+    color: $color-grey-dark;
+
+    // @include respond(tab-port) {
+    //     padding: 0;
+    // }
+}
+
+// Changing how selected text looks on the site
+::selection {
+    background-color: $color-primary;
+    color: $color-white;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 3rem 1fr 1fr 3rem;
+    grid-template-rows: min-content min-content max-content max-content min-content min-content;
+    // background-color: $color-primary-light;
+
+    // row-gap: 2rem;
+}
+
+
+

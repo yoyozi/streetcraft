@@ -1,0 +1,93 @@
+
+#mydiv {
+    position: absolute;
+    top: 43%;
+    left: 2%;
+    background-color: #fff;
+    text-align: center;
+    border: 1px solid #d3d3d3;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  #mydivheader {
+    padding: .8rem;
+    cursor: move;
+    z-index: 10;
+    background-color: $color-primary-light;
+    color: $color-primary-dark;
+  }
+
+.drag {
+    z-index: 4000;
+
+    &__box {
+        width: 18%;
+
+        @media (max-width: $bp-800) {
+           width: 21%;
+        }
+    }
+
+
+    &__boxstring {
+        padding: .5rem;
+        list-style: none;
+        color: $color-primary-dark;
+        padding: .3rem;
+        font-size: 1.2rem;
+    }
+    
+    &__boxheader {
+        display: grid;
+        grid-template-columns: max-content;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: 700;
+        border: 1px solid #d3d3d3;
+
+        @media (max-width: $bp-800) {
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+    }
+    
+    &__box-beadwork {
+        border-left: 1rem solid orange;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+    
+    &__box-fabric {
+        border-left: 1rem solid green;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+    
+    &__box-hair {
+        border-left: 1rem solid #666;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+
+    &__box-fencing {
+        border-left: 1rem solid red;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+    &__box-artwork {
+        border-left: 1rem solid yellow;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+    &__box-leatherwork {
+        border-left: 1rem solid brown;
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+    }
+
+}
+
+

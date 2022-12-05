@@ -1,0 +1,100 @@
+.adlisting {
+    grid-column: 1 / -1;
+    grid-row: 2 / 3;
+}
+
+
+$duration: 155s;
+
+@-webkit-keyframes ticker {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+  }
+
+  100% {
+    -webkit-transform: translate3d(-100%, 0, 0);
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes ticker {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+  }
+
+  100% {
+    -webkit-transform: translate3d(-100%, 0, 0);
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.ticker-wrap {
+  
+    overflow: hidden;
+    height: 4rem;
+    background-color: $color-primary-light; 
+    padding-left: 100%;
+    box-sizing: content-box;
+    
+    .ticker {
+        
+        display: inline-block;
+        height: 4rem;
+        line-height: 4rem;  
+        white-space: nowrap;
+        padding-right: 100%;
+        box-sizing: content-box;
+
+        -webkit-animation-iteration-count: infinite; 
+        animation-iteration-count: infinite;
+        -webkit-animation-timing-function: linear;
+        animation-timing-function: linear;
+        -webkit-animation-name: ticker;
+        animation-name: ticker;
+        -webkit-animation-duration: $duration;
+        animation-duration: $duration;
+                
+        &__item {
+            color: $ticker-font-color; 
+            display: inline-block;
+            padding: 0 2rem;
+            font-size: 1.4rem; 
+            font-weight: 600;
+            
+            &--a {
+                color: green;
+            }
+            &--b {
+                color: orange;
+            }
+            &--c {
+                color: red;
+            }
+            &--d {
+                color: grey;
+            }
+            &--e {
+                color: #000;
+            }
+            &--f {
+                color: $color-primary-dark;
+            }
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+}
+
+.ticker:hover {
+    animation-play-state: paused;
+}
+
+
+

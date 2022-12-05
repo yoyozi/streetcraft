@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+        <meta name="description" content="Street craft vendors. Website for street vendors Johannesburg. Selling craft on street, beadwork, screens, outdoor barbers, seamstress">
+        <meta name="keywords" content="Craft vendors, beadwork, outdoor businesses.vendoors, ">
+        <meta name="author" content="Craig Leppan">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css"
+        integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14="
+        crossorigin=""/>
+    
+        <!-- Make sure you put this AFTER Leaflet's CSS -->
+        <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js"
+        integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg="
+        crossorigin=""></script>
+
+
+        <link rel="shortcut icon" type="image/png" href="./src/img/favicon.ico">
+
+        <link rel="stylesheet" href="./src/sass/main.scss">
+        <script type="module" src="./src/js/controller.js"></script>
+
+        
+        <title>Street Craft</title>
+    </head>
+
+
+    <div class="drag">
+       
+        <div class="drag__box" id="mydiv">
+          <div id="mydivheader" class="drag__boxheader drag__boxheader-fabric">SheShwe
+            <p class="drag__boxheader--sub">[move me]</p>
+          </div>
+
+          <p class="drag__boxstring">Dog beds, dog houses, blankets, Picnic mats</p>
+        </div>
+
+    </div>
+
+
+
+
+    <body class="container">
+
+        <header class="header">
+            <div class="header__logo-box">
+                <img src="./src/img/scraft-logo-300-2x.png" alt="Logo" class="header__logo">
+            </div>
+
+            <div class="header__text-box1">
+                <h1 class="heading-primary">
+                    <span class="heading-primary--main">Street Craft</span>
+                </h1>
+            </div>
+
+
+            <div class="header__text-box2">
+                <h1 class="heading-primary">
+                    <span class="heading-primary--sub">Johannesburg</span>
+                </h1>
+            </div>
+        </header>
+
+
+        <section class="adlisting">
+ 
+            <div class="ticker-wrap">
+                <div class="ticker">
+                    <div class="ticker__item">
+                        <a class="ticker__item--a" target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b" target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R66/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--e"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a"target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b"target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R166/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--e"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a" target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b" target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R66/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--e"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a"target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b"target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R166/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--f"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a" target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b" target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R66/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--e"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a"target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b"target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R166/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--e"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a" target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c" target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R66/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--f"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--a"target="_blank" href="https://netsecurity.co.za/specials.html">R220/m 40gigs DATA with Simm</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--b"target="_blank" href="https://netsecurity.co.za/specials.html">Web Hosing R166/m with mail.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--c"target="_blank" href="https://netsecurity.co.za/specials.html">Professional WiFi installs.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--d"target="_blank" href="https://netsecurity.co.za/specials.html">Website design.</a>
+                    </div>--
+                    <div class="ticker__item">
+                        <a class="ticker__item--f"target="_blank" href="https://netsecurity.co.za/specials.html">Professional web applications.</a>
+                    </div>--
+                </div>
+            </div>
+
+        </section>
+
+        <section class="mapBox">
+
+            <div id="map">
+
+            </div>
+            
+        </section>
+
+        <section class="pops">
+
+            <div class="popups">
+
+
+                <!-- The Modals -->
+                <div id="myModal1" class="modal">
+                    <div class="modal-content">
+                        <img class="modal__img" src="https://zenergy.site/storage/streetcraft/shweshwe_1.jpg" alt="Shweshwe" />
+                    </div>
+                    <span class="modal-close" data-modalshow="none">X</span>
+                </div>
+                
+                <div id="myModal2" class="modal">
+                    <div class="modal-content">
+                        <img class="modal__img" src="https://zenergy.site/storage/streetcraft/shweshwe_2.jpg" alt="Shweshwe" />
+                    </div>
+                    <span class="modal-close" data-modalshow="none">X</span>
+                </div>
+                
+                <div id="myModal3" class="modal">
+                    <div class="modal-content">
+                        <img class="modal__img" src="https://zenergy.site/storage/streetcraft/shweshwe_3.jpg" alt="Shweshwe" />
+                    </div>
+                    <span class="modal-close" data-modalshow="none">X</span>
+                </div>
+
+                <div id="myModal4" class="modal">
+                    <div class="modal-content">
+                        <img class="modal__img" src="https://zenergy.site/storage/streetcraft/shweshwe_4.jpg" alt="Shweshwe" />
+                    </div>
+                    <span class="modal-close" data-modalshow="none">X</span>
+                </div>
+
+                <div class="thumbnails">
+
+                    <img class="thumb thumbnails__fabric" data-modalshow="1" id="myImg" src="https://zenergy.site/storage/streetcraft/shweshwe_1.jpg" alt="Shweshwe" />
+                
+                
+                    <img class="thumb" data-modalshow="2" id="myImg" src="https://zenergy.site/storage/streetcraft/shweshwe_2.jpg" alt="Shweshwe" />
+                    
+                    
+                    <img class="thumb" data-modalshow="3" id="myImg" src="https://zenergy.site/storage/streetcraft/shweshwe_3.jpg" alt="Shweshwe" />
+                    
+                    
+                    <img class="thumb" data-modalshow="4" id="myImg" src="https://zenergy.site/storage/streetcraft/shweshwe_4.jpg" alt="Shweshwe" />
+
+                </div>                   
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer__box"> 
+                <div class="footer__box--left">
+                    <div class="footer__items--left">
+                        <h2 class="footer__header">Local products and services.</h2>
+    
+                        <p class="footer__text">Local advertising, local to suburbs: comming soon. With the rising costs of fuel and services better to know what is found right on your doorstep!</p> 
+    
+                        <p class="footer__text">We as a comunity need to develop our knowledge about our community so as to ensure we know who is in the comunity and what we can do for each other. This knowledge in time will become very important to the lives of the community.</p> 
+                                
+    
+                    </div>
+                </div>
+    
+    
+    
+                <div class="footer__box--middle">
+                    <div class="footer__items--middle">
+    
+    
+                        <img class="jpic" src="./src/img/flag-map-south-africa.jpg" alt="Craig">
+                    
+                        <div class="footer__text footer__text--middle">Local is lekker !</div>
+                        
+    
+    
+                    </div>
+                </div>
+    
+                <div class="footer__box--right">
+                    <div class="footer__items--right">
+                        
+                        <div class="footer__text footer__items--right--one">
+                            Connect with fellow locals<br>
+                            info@adlocal.co.za<br>  
+                        </div>
+                    
+                        <div class="footer__text footer__items--right--two">
+                            <strong>Starting with:</strong><br>
+                            Westdene.<br> 
+                            Sophiatown<br>
+                        </div>
+    
+                        <div class="footer__icon row social footer__items--right--three">
+                            <h2 class="footer__header--sub">Designed, built and run by:</h2><a target = "blank" href='https://netsecurity.co.za'>
+                                <img class="netsec__icon" src="./src/img/netsec-logo-sm.png" alt="For honey">
+                            </a>
+                        </div>
+    
+                    </div>
+                </div>
+            </div> 
+        </footer>
+
+        <section class="linkblock">
+
+            <!-- <div class="linkblock__spacer">
+
+            </div> -->
+
+            <div class="linkblock__item">
+
+                <a href="https://4that.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/4that-logo-150-1x.png" alt="4That trading">
+                </a>
+
+                <h3 class="linkblock__heading">4that</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Trading: this "4 That"</li>
+                        <li>Location specific trading</li>
+                        <li>Trade food grown at home</li>
+                        <li>Eat/Grow local: save energy</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            
+            <div class="linkblock__item">
+
+                <a href="https://adlocal.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/adlocal-logo-300-2x.png" alt="Local advertising">
+
+                </a>
+
+                <h3 class="linkblock__heading">AdLocal</h3>
+
+                <div class="linkblock__list">
+                    <ul>
+                    <li>Advertise locally</li>
+                    <li>Save petrol</li>
+                    <li>Know your neighbour</li>
+                    <li>Local is lekker</li>
+
+                    </ul>
+                </div>
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://activeoxygen.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/ao-logo-300-2x.png" alt="Active Oxygen">
+                </a>
+
+                <h3 class="linkblock__heading">Active O<sup>2</sup></h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Ozone treatment solutions</li>
+                        <li>Sterilizing with Ozone</li>
+                        <li>Ozone saunas (local manufacture)</li>
+                        <li>Healthcare and curing ailments</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://microfarming.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/mic-logo-300-2x.png" alt="Microfarming">
+                </a>
+
+                <h3 class="linkblock__heading">Mircrofarming</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Grow aquaponically</li>
+                        <li>Microgreen growing</li>
+                        <li>Organic growing and cultivation</li>
+                        <li>Fish sales for aquaponics</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://netsecurity.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/netsec-logo-300-2x.png" alt="Networks and IT">
+                </a>
+
+                <h3 class="linkblock__heading">Netsecurity</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Website development & hosting</li>
+                        <li>Internet connectivity & security</li>
+                        <li>Hosting and mail systems</li>
+                        <li>Wifi and networks</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://wildflowehoney.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/wfh-logo-300-2x.png" alt="Raw honey">
+                </a>
+
+                <h3 class="linkblock__heading">Wildflower Honey</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Unadulterated honey</li>
+                        <li>Creamed honey</li>
+                        <li>Honeycombe</li>
+                        <li>Locally farmed</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://streetcraft.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock//scraft-logo-300-2x.png" alt="Street Crafters market">
+                </a>
+
+                <h3 class="linkblock__heading">Street Craft</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Local to you registry</li>
+                        <li>Crafted by skilled hands</li>
+                        <li>Eeking out an existance</li>
+                        <li>Brandt of a failed state</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <div class="linkblock__item">
+
+                <a href="https://springklersforafrica.co.za/" target="_blank">
+                    <img class="linkblock__item--photi" src="https://zenergy.site/storage/linkblock/sfa-logo-300-2x.png" alt="Sprinklers for Africa">
+                </a>
+
+                <h3 class="linkblock__heading">Sprinklers 4 Africa</h3>
+
+                <div class="linkblock__list">
+
+                    <ul>
+                        <li>Borehole pump establishment</li>
+                        <li>Borehole pump fiment</li>
+                        <li>Spikes and water location</li>
+                        <li>Water filtration & reclamation</li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>

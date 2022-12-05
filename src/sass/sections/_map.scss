@@ -1,0 +1,76 @@
+.mapBox {
+    grid-row: 3 / 4;
+    grid-column: 1 / -1;
+    height: 65vh;
+    padding-bottom: 2rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
+    background-color: $color-primary-light;
+
+    @media (max-width: 600px) {
+        height: 55vh;
+    }
+    
+}
+
+/* MAP */
+#map {
+    height: 100%;
+    background-color: $color-primary-light;
+    // z-index: 10;
+}
+
+
+
+/* Popup width is defined in JS using options */
+
+.leaflet-popup-content-wrapper {
+    background-color: $color-primary-light;
+    color: $color-primary-dark;
+    //padding: 1rem;
+// // border-radius: 5px;
+    // padding-right: 2.6rem;
+    // padding-left: 2.6rem;
+    // padding-top: 1px;
+    // padding-bottom: 1px;
+    
+//     padding-right: 12px;
+}
+
+.leaflet-popup-content {
+    font-size: 1.5rem;
+    //padding: 1.5rem;
+    margin: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.leaflet-popup .leaflet-popup-tip {
+    opacity: 100;
+    background-color: yellow;
+}
+
+.beadwork-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid orange;
+}
+
+.fabric-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid green;
+}
+
+.hair-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid #666;
+}
+            
+     
+.fencing-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid red;
+}      
+        
+.leatherwork-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid brown;
+}  
+
+.artwork-popup .leaflet-popup-content-wrapper{
+    border-left: 7px solid yellow;
+}    
