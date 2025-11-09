@@ -83,7 +83,7 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -T 10 -p 22 -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Ensure remote deploy directory exists
+      - name: Ensure remote deploy directory exists (best-effort)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -91,12 +91,11 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -euxo pipefail
-            sudo mkdir -p "${{ inputs.remote_path }}"
-            # Ensure parent root has cooperative permissions as well
-            sudo chown -R $USER:www-data "$(dirname '${{ inputs.remote_path }}')"
-            sudo chmod -R 2775 "$(dirname '${{ inputs.remote_path }}')"
-            sudo chown -R $USER:www-data "${{ inputs.remote_path }}"
-            sudo chmod -R 2775 "${{ inputs.remote_path }}"
+            mkdir -p "${{ inputs.remote_path }}" || true
+            # If parent exists and is writable, attempt to set cooperative perms; ignore failures
+            PARENT_DIR="$(dirname '${{ inputs.remote_path }}')"
+            [ -d "$PARENT_DIR" ] && chmod 2775 "$PARENT_DIR" || true
+            chmod 2775 "${{ inputs.remote_path }}" || true
 
       - name: Rsync deploy artifacts
         uses: burnett01/rsync-deployments@6.0.0
