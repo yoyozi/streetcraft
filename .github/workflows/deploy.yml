@@ -9,7 +9,7 @@ jobs:
   deploy:
     uses: ./.github/workflows/nextjs-standalone-deploy.yml
     with:
-      remote_path: /var/www/streetcraft.netsecurity.co.za
+      remote_path: /var/www/streetcraft.netsecurity.co.za/app
       service_name: streetcraft-netsecurity-co-za
       app_port: 3001
       host_header: streetcraft.netsecurity.co.za

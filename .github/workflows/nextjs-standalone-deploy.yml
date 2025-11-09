@@ -53,7 +53,7 @@ jobs:
 
       - name: Stage deploy artifacts
         run: |
-          set -e
+          set -euxo pipefail
           rm -rf deploy
           mkdir -p deploy/.next
           cp -a .next/standalone deploy/.next/
@@ -70,6 +70,7 @@ jobs:
 
       - name: Export BUILD_ID
         run: |
+          set -euxo pipefail
           if [ -f .next/BUILD_ID ]; then
             echo "BUILD_ID=$(cat .next/BUILD_ID)" >> $GITHUB_ENV
             echo "Local BUILD_ID: $(cat .next/BUILD_ID)"
@@ -82,15 +83,43 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -T 10 -p 22 -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Ensure remote deploy directory exists
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            sudo mkdir -p "${{ inputs.remote_path }}"
+            # Ensure parent root has cooperative permissions as well
+            sudo chown -R $USER:www-data "$(dirname '${{ inputs.remote_path }}')"
+            sudo chmod -R 2775 "$(dirname '${{ inputs.remote_path }}')"
+            sudo chown -R $USER:www-data "${{ inputs.remote_path }}"
+            sudo chmod -R 2775 "${{ inputs.remote_path }}"
+
       - name: Rsync deploy artifacts
         uses: burnett01/rsync-deployments@6.0.0
         with:
-          switches: -avzr --delete --no-perms --no-owner --no-group --omit-dir-times --exclude='/node_modules' --exclude='.git*'
+          switches: -avzvr --delete --no-perms --no-owner --no-group --omit-dir-times --exclude='/node_modules' --exclude='.git*'
           path: deploy/
           remote_path: ${{ inputs.remote_path }}
           remote_host: ${{ secrets.SSH_HOST }}
           remote_user: ${{ secrets.SSH_USER }}
           remote_key: ${{ secrets.SSH_KEY }}
+
+      - name: Inspect remote layout (pre-restart)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            echo "Remote path: ${{ inputs.remote_path }}"
+            ls -la ${{ inputs.remote_path }} || true
+            ls -la ${{ inputs.remote_path }}/.next || true
+            ls -la ${{ inputs.remote_path }}/.next/standalone || true
 
       - name: Run database migrations (if configured)
         uses: appleboy/ssh-action@v1.2.0
@@ -121,7 +150,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            set -e
+            set -euxo pipefail
             if [ -n "${{ env.BUILD_ID }}" ]; then
               echo "Verifying remote BUILD_ID matches ${{ env.BUILD_ID }}"
               if [ ! -f "${{ inputs.remote_path }}/.next/BUILD_ID" ]; then
@@ -137,6 +166,16 @@ jobs:
             sudo -n /bin/systemctl restart ${{ inputs.service_name }}
             sudo -n /bin/systemctl status --no-pager ${{ inputs.service_name }} || true
             echo "Remote app layout:" && ls -la ${{ inputs.remote_path }} && ls -la ${{ inputs.remote_path }}/.next || true
+
+      - name: Tail service logs (last 200 lines)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            sudo -n journalctl -u ${{ inputs.service_name }} -n 200 --no-pager || true
 
       - name: Health check (app port)
         uses: appleboy/ssh-action@v1.2.0
