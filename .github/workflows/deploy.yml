@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    uses: yoyozi/constant-integration/.github/workflows/nextjs-standalone-deploy.yml@main
+    uses: ./.github/workflows/nextjs-standalone-deploy.yml
     with:
       remote_path: /var/www/streetcraft.netsecurity.co.za
       service_name: streetcraft-netsecurity-co-za
