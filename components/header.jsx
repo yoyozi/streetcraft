@@ -5,10 +5,12 @@ import { FaStar, FaHome, FaEye } from 'react-icons/fa';
 import { usePathname} from 'next/navigation'
 import { useState, useEffect } from 'react';
 
+
 const Header = () => {
 
   const pathname = usePathname();
   const [home, setHome] = useState(false)
+  const rt = pathname.split('/')[1]
 
   useEffect(() => {
     setHome(pathname)
@@ -50,8 +52,9 @@ const Header = () => {
                       <div class="inline-block py-2 px-4 text-white no-underline">{pathname}</div>
                     </li>
 
-                    {(pathname !== '/') &&
+                    {(rt === 'crafters') &&
                       (
+                      <>
                         <li class="mr-3">
                           <Link 
                             class="transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-110 inline-block text-2xl text-white no-underline hover:text-gray-900 hover:text-underline py-2 px-4 duration-300" 
@@ -59,6 +62,27 @@ const Header = () => {
                               <FaHome />
                           </Link>
                         </li>
+                        <li class="mr-3">
+                          <Link 
+                            className="transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-110 inline-block text-white no-underline hover:text-gray-900 active:text-gray-900 hover:text-underline py-2 px-4 duration-300" 
+                            href="/crafts/select_one">
+                              Crafts
+                          </Link>
+                        </li>
+                      </>
+                    )}
+
+                    {(rt === 'crafts') &&
+                      (
+                      <>
+                        <li class="mr-3">
+                          <Link 
+                            class="transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-110 inline-block text-2xl text-white no-underline hover:text-gray-900 hover:text-underline py-2 px-4 duration-300" 
+                            href="/">
+                              <FaHome />
+                          </Link>
+                        </li>
+                      </>
                     )}
 
                     {(pathname === '/') && 

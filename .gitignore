@@ -38,4 +38,4 @@ next-env.d.ts
 z-todo.txt
 
 # Remove all Data
-/data
+#/data

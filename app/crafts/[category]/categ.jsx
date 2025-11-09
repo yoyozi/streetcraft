@@ -50,8 +50,8 @@ export default function CategoryPage(props) {
               key={index}  
               href={`/crafts/${cat}`} 
               className={pathname ===`/crafts/${cat}` ? 
-              'm-2 bg-secondary text-slate-900 rounded-lg p-4 border-2 border-secondary' :
-              'm-2 bg-primary text-white rounded-lg p-4'}
+              'm-2 bg-primary text-white rounded-lg p-4 border-2 border-primary' :
+              'transition ease-in-out delay-150 hover:-translate-y-1 hover:scale-105 m-2 bg-white text-slate-900 border-2 border-slate-200 rounded-lg p-4'}
             >
               <li >
                 {cat}

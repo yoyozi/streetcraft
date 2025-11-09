@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import AllImages from '@/components/all-images';
@@ -20,22 +21,27 @@ export function generateMetadata({ params: { slug } }) {
 	};
 }
 
-const CraftersNamePage = async ({ params: { slug } }) => {
-	const crafter = await crafters.find((item) => slug === item.slug);
+const CraftersNamePage = ({ params: { slug } }) => {
+	const crafter = crafters.find((item) => item.slug === slug);
+
+	if (!crafter) {
+		return notFound();
+	}
+
 	const exploreLink = `/crafters/${crafter.slug}`;
 
 	return (
 		<>
 			<div className='grid place-items-center'>
 				<div className='grid grid-cols-1 md:grid-cols-2 sm:mt-28 md:mt-24 mt-20'>
-					<div className='w-60 mb-4 rounded-md border-2 border-slate-300'>
+					<div className='w-full max-w-md mb-4 rounded-md border-2 border-slate-300'>
 						<Image
 							src={`/images/profile/${crafter.landingPic}`}
 							alt={crafter.title}
 							width={1200}
 							height={939}
 							sizes='100vw'
-							className='object-fill rounded-md'
+							className='object-fill rounded-md max-w-full h-auto'
 							//className="image"
 							//placeholder="blur"
 							// style={{
@@ -66,8 +72,8 @@ const CraftersNamePage = async ({ params: { slug } }) => {
 	);
 };
 
-export async function generateStaticParams() {
-	return await crafters.map((crft) => ({ slug: crft.slug.toString() }));
+export function generateStaticParams() {
+	return crafters.map((crft) => ({ slug: crft.slug.toString() }));
 }
 
 export default CraftersNamePage;
