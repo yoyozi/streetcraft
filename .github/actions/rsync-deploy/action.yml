@@ -16,7 +16,7 @@ inputs:
   local_path:
     required: false
     default: deploy/
-    description: Local path to rsync (default: deploy/)
+    description: Local path to rsync (default deploy/)
   switches:
     required: false
     default: -avzvr --delete --no-perms --no-owner --no-group --omit-dir-times --exclude='/node_modules' --exclude='.git*'
