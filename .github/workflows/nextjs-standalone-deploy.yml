@@ -45,67 +45,24 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install deps
-        run: npm ci
+      - name: Build and Stage
+        uses: ./.github/actions/build-stage
 
-      - name: Build
-        run: npm run build
-
-      - name: Stage deploy artifacts
-        run: |
-          set -euxo pipefail
-          rm -rf deploy
-          mkdir -p deploy/.next
-          cp -a .next/standalone deploy/.next/
-          cp -a .next/static deploy/.next/
-          if [ -f .next/BUILD_ID ]; then cp -a .next/BUILD_ID deploy/.next/; fi
-          shopt -s nullglob || true
-          for f in .next/*.json; do cp -a "$f" deploy/.next/; done
-          mkdir -p deploy/.next/standalone/.next
-          if [ -f .next/BUILD_ID ]; then cp -a .next/BUILD_ID deploy/.next/standalone/.next/; fi
-          for f in .next/*.json; do cp -a "$f" deploy/.next/standalone/.next/; done
-          cp -a public deploy/
-          cp -a package.json package-lock.json deploy/
-          echo "Staged contents:" && find deploy -maxdepth 2 -mindepth 1 -print
-
-      - name: Export BUILD_ID
-        run: |
-          set -euxo pipefail
-          if [ -f .next/BUILD_ID ]; then
-            echo "BUILD_ID=$(cat .next/BUILD_ID)" >> $GITHUB_ENV
-            echo "Local BUILD_ID: $(cat .next/BUILD_ID)"
-          else
-            echo "No .next/BUILD_ID found (older Next); continuing without BUILD_ID check"
-          fi
-
-      - name: Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -T 10 -p 22 -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Ensure remote deploy directory exists (best-effort)
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Ensure remote deploy directory exists
+        uses: ./.github/actions/ensure-remote-dir
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            set -euxo pipefail
-            mkdir -p "${{ inputs.remote_path }}" || true
-            # If parent exists and is writable, attempt to set cooperative perms; ignore failures
-            PARENT_DIR="$(dirname '${{ inputs.remote_path }}')"
-            [ -d "$PARENT_DIR" ] && chmod 2775 "$PARENT_DIR" || true
-            chmod 2775 "${{ inputs.remote_path }}" || true
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          remote_path: ${{ inputs.remote_path }}
 
       - name: Rsync deploy artifacts
-        uses: burnett01/rsync-deployments@6.0.0
+        uses: ./.github/actions/rsync-deploy
         with:
-          switches: -avzvr --delete --no-perms --no-owner --no-group --omit-dir-times --exclude='/node_modules' --exclude='.git*'
-          path: deploy/
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          ssh_key: ${{ secrets.SSH_KEY }}
           remote_path: ${{ inputs.remote_path }}
-          remote_host: ${{ secrets.SSH_HOST }}
-          remote_user: ${{ secrets.SSH_USER }}
-          remote_key: ${{ secrets.SSH_KEY }}
 
       - name: Inspect remote layout (pre-restart)
         uses: appleboy/ssh-action@v1.2.0
