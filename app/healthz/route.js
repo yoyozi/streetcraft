@@ -1,6 +1,4 @@
-export function GET() {
-  return new Response('OK', {
-    status: 200,
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
-  });
+// app/api/health/route.js or pages/api/health.js
+export default function handler(req, res) {
+  res.status(200).json({ ok: true });
 }
