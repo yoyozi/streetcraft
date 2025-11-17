@@ -1,8 +1,15 @@
 // lib/yoco.ts
-const YOCO_SECRET_KEY = process.env.YOCO_SECRET_KEY;
+// Environment variable will be accessed during runtime
 
-if (!YOCO_SECRET_KEY) {
-  console.warn('[YOCO] YOCO_SECRET_KEY is not defined in environment variables');
+function getYocoSecretKey() {
+  const YOCO_SECRET_KEY = process.env.YOCO_SECRET_KEY;
+  
+  if (!YOCO_SECRET_KEY) {
+    console.warn('[YOCO] YOCO_SECRET_KEY is not defined in environment variables');
+    return null;
+  }
+  
+  return YOCO_SECRET_KEY;
 }
 
 export async function createYocoCheckout({
@@ -16,7 +23,7 @@ export async function createYocoCheckout({
 }) {
   try {
     // Check if API key is configured
-    if (!YOCO_SECRET_KEY) {
+    if (!getYocoSecretKey()) {
       throw new Error('Yoco payment is not configured. Please contact support.');
     }
 
@@ -24,7 +31,7 @@ export async function createYocoCheckout({
     const response = await fetch('https://payments.yoco.com/api/checkouts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${YOCO_SECRET_KEY}`,
+        'Authorization': `Bearer ${getYocoSecretKey()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -74,7 +81,7 @@ export async function createYocoCheckout({
 export async function verifyYocoPayment(checkoutId: string) {
   try {
     // Check if API key is configured
-    if (!YOCO_SECRET_KEY) {
+    if (!getYocoSecretKey()) {
       throw new Error('Yoco payment is not configured. Please contact support.');
     }
 
@@ -82,7 +89,7 @@ export async function verifyYocoPayment(checkoutId: string) {
       `https://payments.yoco.com/api/checkouts/${checkoutId}`,
       {
         headers: {
-          'Authorization': `Bearer ${YOCO_SECRET_KEY}`,
+          'Authorization': `Bearer ${getYocoSecretKey()}`,
         },
       }
     );
@@ -133,7 +140,7 @@ export async function verifyYocoPayment(checkoutId: string) {
 export async function getYocoPayment(paymentId: string) {
   try {
     // Check if API key is configured
-    if (!YOCO_SECRET_KEY) {
+    if (!getYocoSecretKey()) {
       throw new Error('Yoco payment is not configured. Please contact support.');
     }
 
@@ -141,7 +148,7 @@ export async function getYocoPayment(paymentId: string) {
       `https://payments.yoco.com/api/payments/${paymentId}`,
       {
         headers: {
-          'Authorization': `Bearer ${YOCO_SECRET_KEY}`,
+          'Authorization': `Bearer ${getYocoSecretKey()}`,
         },
       }
     );

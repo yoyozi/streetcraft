@@ -4,7 +4,21 @@ import { SENDER_EMAIL, APP_NAME } from "@/lib/constants";
 // because we are not in the app folder we need to get the .env via the dotenv package
 require('dotenv').config();
 
-const resend = new Resend(process.env.RESEND_API_KEY as string);
+let resendInstance: Resend | null = null;
+
+function getResendInstance() {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  
+  if (!RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not defined in environment variables');
+  }
+  
+  if (!resendInstance) {
+    resendInstance = new Resend(RESEND_API_KEY as string);
+  }
+  
+  return resendInstance;
+}
 
 interface EmailOptions {
   to: string;
@@ -15,7 +29,7 @@ interface EmailOptions {
 
 export const SendEmail = async ({ to, subject, react }: EmailOptions) => {
   try {
-    await resend.emails.send({
+    await getResendInstance().emails.send({
       from: `${APP_NAME} <${SENDER_EMAIL}>`,
       to,
       subject,
