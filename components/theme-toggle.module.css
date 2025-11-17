@@ -1,0 +1,80 @@
+/* Theme Toggle - CSS Modules */
+
+.themeButton {
+  width: 2.5rem;
+  height: 2.5rem;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  transition: all 0.3s ease;
+}
+
+.themeButton:hover {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--primary));
+}
+
+.icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.sunIcon {
+  opacity: 1;
+  rotate: 0deg;
+  scale: 1;
+}
+
+.moonIcon {
+  opacity: 0;
+  rotate: 90deg;
+  scale: 0;
+}
+
+/* Dark mode styles */
+.dark .sunIcon {
+  opacity: 0;
+  rotate: -90deg;
+  scale: 0;
+}
+
+.dark .moonIcon {
+  opacity: 1;
+  rotate: 0deg;
+  scale: 1;
+}
+
+/* Dropdown menu styling */
+.dropdownContent {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  min-width: 8rem;
+}
+
+.dropdownItem {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdownItem:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.dropdownItem:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}

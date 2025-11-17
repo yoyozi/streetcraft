@@ -1,0 +1,20 @@
+name: Deploy Streetcraft
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/nextjs-standalone-deploy.yml
+    with:
+      remote_path: /var/www/streetcraft.netsecurity.co.za/app
+      service_name: streetcraft-netsecurity-co-za
+      app_port: 3001
+      host_header: streetcraft.netsecurity.co.za
+      env_file: /etc/streetcraft.netsecurity.co.za.env
+    secrets:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}

@@ -1,0 +1,276 @@
+/* Layout CSS Modules - Mobile First Design */
+
+/* Header Container - Mobile First */
+.headerContainer {
+  width: 100%;
+  border-bottom: 2px solid hsl(var(--border));
+  background-color: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+}
+
+/* Logo Section - Mobile First */
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0; /* Prevent flex item overflow */
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  min-width: 0; /* Prevent flex item overflow */
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background-color: #ec5c2b; /* Orange background */
+  color: white;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.logoContainer:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(236, 92, 43, 0.3);
+}
+
+.logoText {
+  font-weight: 700;
+  color: hsl(var(--primary));
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Search Section - Mobile First (Hidden on mobile) */
+.searchSection {
+  display: none;
+  flex: 1;
+  max-width: 20rem;
+  margin: 0 1rem;
+}
+
+/* Actions Section - Mobile First */
+.actionsSection {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0; /* Prevent actions from shrinking */
+}
+
+/* Mobile Search - Mobile First */
+.mobileSearch {
+  display: block;
+  padding: 0 1rem 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background) / 0.95);
+}
+
+/* Button Styles - Mobile First */
+.actionButton {
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: hsl(var(--foreground));
+}
+
+.actionButton:hover {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--primary));
+  transform: translateY(-1px);
+}
+
+.actionButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design - Mobile First */
+
+/* Small (640px+) */
+@media (min-width: 640px) {
+  .headerContent {
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+  }
+  
+  .logoSection {
+    gap: 1rem;
+  }
+  
+  .logoContainer {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .logoText {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  .actionsSection {
+    gap: 0.5rem;
+  }
+  
+  .mobileSearch {
+    padding: 0 1.5rem 1rem;
+  }
+}
+
+/* Medium (768px+) */
+@media (min-width: 768px) {
+  .headerContent {
+    padding: 1rem 2rem;
+  }
+  
+  .searchSection {
+    display: flex;
+  }
+  
+  .mobileSearch {
+    display: none;
+  }
+  
+  .logoText {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+}
+
+/* Large (1024px+) */
+@media (min-width: 1024px) {
+  .headerContent {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  
+  .searchSection {
+    max-width: 28rem;
+  }
+}
+
+/* Icon Sizes */
+.icon4 {
+  width: 1rem;
+  height: 1rem;
+}
+
+.icon5 {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Text Sizes */
+.textSm {
+  font-size: 0.875rem;
+}
+
+.textLg {
+  font-size: 1.125rem;
+}
+
+.text2xl {
+  font-size: 1.5rem;
+}
+
+.fontBold {
+  font-weight: 700;
+}
+
+/* Display Utilities */
+.hidden {
+  display: none;
+}
+
+.block {
+  display: block;
+}
+
+.flex {
+  display: flex;
+}
+
+/* Responsive Display */
+@media (min-width: 640px) {
+  .smBlock {
+    display: block;
+  }
+  
+  .smFlex {
+    display: flex;
+  }
+  
+  .smHidden {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .mdBlock {
+    display: block;
+  }
+  
+  .mdFlex {
+    display: flex;
+  }
+  
+  .mdHidden {
+    display: none;
+  }
+}
+
+/* Width Utilities */
+.w10 {
+  width: 2.5rem;
+}
+
+.h10 {
+  height: 2.5rem;
+}
+
+.h12 {
+  height: 3rem;
+}
+
+/* Screen reader only */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

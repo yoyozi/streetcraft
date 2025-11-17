@@ -1,0 +1,36 @@
+name: Ensure Remote Deploy Directory
+description: Create remote deploy directory with cooperative permissions (best-effort, no sudo)
+inputs:
+  ssh_host:
+    required: true
+    description: SSH host
+  ssh_user:
+    required: true
+    description: SSH user
+  ssh_key:
+    required: true
+    description: SSH private key
+  remote_path:
+    required: true
+    description: Remote absolute deploy path
+runs:
+  using: composite
+  steps:
+    - name: Add server to known_hosts
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -T 10 -p 22 -H "${{ inputs.ssh_host }}" >> ~/.ssh/known_hosts
+
+    - name: Ensure remote dir
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ inputs.ssh_host }}
+        username: ${{ inputs.ssh_user }}
+        key: ${{ inputs.ssh_key }}
+        script: |
+          set -euxo pipefail
+          mkdir -p "${{ inputs.remote_path }}" || true
+          PARENT_DIR="$(dirname '${{ inputs.remote_path }}')"
+          [ -d "$PARENT_DIR" ] && chmod 2775 "$PARENT_DIR" || true
+          chmod 2775 "${{ inputs.remote_path }}" || true

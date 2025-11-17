@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    /* Light mode - using logocolor */
+    .logo-bg { fill: oklch(0.6 0.118 184.704); }  /* --logocolor light */
+    .logo-text { fill: oklch(0.984 0.003 247.858); }  /* primary-foreground */
+    
+    /* Dark mode - using logocolor */
+    @media (prefers-color-scheme: dark) {
+      .logo-bg { fill: oklch(0.75 0.12 50); }  /* --logocolor dark */
+      .logo-text { fill: oklch(0.129 0.042 264.695); }  /* dark foreground */
+    }
+  </style>
+  
+  <!-- Background rounded rectangle -->
+  <rect class="logo-bg" width="100" height="100" rx="20"/>
+  
+  <!-- Text with custom font styling -->
+  <text 
+    x="50" 
+    y="70" 
+    font-size="60" 
+    font-weight="700" 
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    text-anchor="middle" 
+    class="logo-text"
+    letter-spacing="4">SC</text>
+</svg>

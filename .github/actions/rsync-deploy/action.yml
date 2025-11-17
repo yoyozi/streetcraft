@@ -1,0 +1,35 @@
+name: Rsync Deploy Artifacts
+description: Rsync staged artifacts to a remote path
+inputs:
+  ssh_host:
+    required: true
+    description: SSH host
+  ssh_user:
+    required: true
+    description: SSH user
+  ssh_key:
+    required: true
+    description: SSH private key
+  remote_path:
+    required: true
+    description: Remote absolute deploy path
+  local_path:
+    required: false
+    default: deploy/
+    description: Local path to rsync (default deploy/)
+  switches:
+    required: false
+    default: -avzvr --delete --no-perms --no-owner --no-group --omit-dir-times --exclude='/node_modules' --exclude='.git*'
+    description: Custom rsync switches
+runs:
+  using: composite
+  steps:
+    - name: Rsync
+      uses: burnett01/rsync-deployments@6.0.0
+      with:
+        switches: ${{ inputs.switches }}
+        path: ${{ inputs.local_path }}
+        remote_path: ${{ inputs.remote_path }}
+        remote_host: ${{ inputs.ssh_host }}
+        remote_user: ${{ inputs.ssh_user }}
+        remote_key: ${{ inputs.ssh_key }}

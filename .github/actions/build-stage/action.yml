@@ -1,0 +1,41 @@
+name: Build and Stage Next.js Standalone
+description: Install deps, build, and stage deploy artifacts (standalone + static + public + package files)
+runs:
+  using: composite
+  steps:
+    - name: Install deps
+      shell: bash
+      run: npm ci
+
+    - name: Build
+      shell: bash
+      run: npm run build
+
+    - name: Stage deploy artifacts
+      shell: bash
+      run: |
+        set -euxo pipefail
+        rm -rf deploy
+        mkdir -p deploy/.next
+        cp -a .next/standalone deploy/.next/
+        cp -a .next/static deploy/.next/
+        if [ -f .next/BUILD_ID ]; then cp -a .next/BUILD_ID deploy/.next/; fi
+        shopt -s nullglob || true
+        for f in .next/*.json; do cp -a "$f" deploy/.next/; done
+        mkdir -p deploy/.next/standalone/.next
+        if [ -f .next/BUILD_ID ]; then cp -a .next/BUILD_ID deploy/.next/standalone/.next/; fi
+        for f in .next/*.json; do cp -a "$f" deploy/.next/standalone/.next/; done
+        cp -a public deploy/
+        cp -a package.json package-lock.json deploy/
+        echo "Staged contents:" && find deploy -maxdepth 2 -mindepth 1 -print
+
+    - name: Export BUILD_ID
+      shell: bash
+      run: |
+        set -euxo pipefail
+        if [ -f .next/BUILD_ID ]; then
+          echo "BUILD_ID=$(cat .next/BUILD_ID)" >> $GITHUB_ENV
+          echo "Local BUILD_ID: $(cat .next/BUILD_ID)"
+        else
+          echo "No .next/BUILD_ID found (older Next); continuing without BUILD_ID check"
+        fi

@@ -1,0 +1,166 @@
+name: Reusable Next.js Standalone Deploy
+
+on:
+  workflow_call:
+    inputs:
+      remote_path:
+        description: "Absolute path on server where app is deployed (e.g. /var/www/site/app)"
+        required: true
+        type: string
+      service_name:
+        description: "systemd service name to restart (e.g. accounts-netsecurity-co-za.service)"
+        required: true
+        type: string
+      app_port:
+        description: "App port for health checks (e.g. 3002)"
+        required: true
+        type: number
+      host_header:
+        description: "Host header domain for Nginx health check (e.g. accounts.netsecurity.co.za)"
+        required: true
+        type: string
+      env_file:
+        description: "Optional /etc/<file>.env path. Defaults to /etc/<host_header>.env"
+        required: false
+        type: string
+    secrets:
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+      SSH_KEY:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      ENV_FILE: ${{ inputs.env_file || format('/etc/{0}.env', inputs.host_header) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build and Stage
+        uses: ./.github/actions/build-stage
+
+      - name: Ensure remote deploy directory exists
+        uses: ./.github/actions/ensure-remote-dir
+        with:
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          remote_path: ${{ inputs.remote_path }}
+
+      - name: Rsync deploy artifacts
+        uses: ./.github/actions/rsync-deploy
+        with:
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          remote_path: ${{ inputs.remote_path }}
+
+      - name: Inspect remote layout (pre-restart)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            echo "Remote path: ${{ inputs.remote_path }}"
+            ls -la ${{ inputs.remote_path }} || true
+            ls -la ${{ inputs.remote_path }}/.next || true
+            ls -la ${{ inputs.remote_path }}/.next/standalone || true
+
+      - name: Run database migrations (if configured)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            ENV_FILE="${{ env.ENV_FILE }}"
+            if [ -f "$ENV_FILE" ]; then
+              MIGRATE_CMD_VALUE=$(sed 's/\r$//' "$ENV_FILE" | grep -E '^MIGRATE_CMD=' | tail -n1 | cut -d= -f2-)
+              if [ -n "$MIGRATE_CMD_VALUE" ]; then
+                echo "Running migrations: $MIGRATE_CMD_VALUE"
+                sh -lc "$MIGRATE_CMD_VALUE"
+                echo "Migrations completed."
+              else
+                echo "No MIGRATE_CMD set in $ENV_FILE; skipping migrations."
+              fi
+            else
+              echo "Env file $ENV_FILE not found; skipping migrations."
+            fi
+
+      - name: Restart systemd service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            if [ -n "${{ env.BUILD_ID }}" ]; then
+              echo "Verifying remote BUILD_ID matches ${{ env.BUILD_ID }}"
+              if [ ! -f "${{ inputs.remote_path }}/.next/BUILD_ID" ]; then
+                echo "ERROR: Remote BUILD_ID file missing"; exit 1;
+              fi
+              REMOTE_ID=$(cat "${{ inputs.remote_path }}/.next/BUILD_ID")
+              echo "Remote BUILD_ID: $REMOTE_ID"
+              if [ "$REMOTE_ID" != "${{ env.BUILD_ID }}" ]; then
+                echo "ERROR: BUILD_ID mismatch"; exit 1;
+              fi
+            fi
+            sudo -n /bin/systemctl daemon-reload
+            sudo -n /bin/systemctl restart ${{ inputs.service_name }}
+            sudo -n /bin/systemctl status --no-pager ${{ inputs.service_name }} || true
+            echo "Remote app layout:" && ls -la ${{ inputs.remote_path }} && ls -la ${{ inputs.remote_path }}/.next || true
+
+      - name: Tail service logs (last 200 lines)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            sudo -n journalctl -u ${{ inputs.service_name }} -n 200 --no-pager || true
+
+      - name: Health check (app port)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            for i in {1..10}; do
+              if curl -fsS http://127.0.0.1:${{ inputs.app_port }}/healthz >/dev/null; then
+                echo "App port health OK"; exit 0;
+              fi
+              echo "Waiting for app port health... ($i)"; sleep 2;
+            done
+            echo "Health check failed on app port"; exit 1
+
+      - name: Health check (through Nginx)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            for i in {1..10}; do
+              if curl -fsS -H "Host: ${{ inputs.host_header }}" http://127.0.0.1/healthz >/dev/null; then
+                echo "Nginx health OK"; exit 0;
+              fi
+              echo "Waiting for Nginx health... ($i)"; sleep 2;
+            done
+            echo "Health check failed via Nginx"; exit 1
