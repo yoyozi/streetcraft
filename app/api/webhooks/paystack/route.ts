@@ -1,10 +1,14 @@
+/*
+// PAYSTACK WEBHOOK - COMMENTED OUT DUE TO BUILD ISSUES
+// Uncomment when environment variables are properly configured
+
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { connectDB, Order } from '@/lib/mongodb/models';
 import { revalidatePath } from 'next/cache';
 import { PaystackWebhookPayload } from '@/types/webhooks';
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+// const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 /**
  * Verify Paystack webhook signature
@@ -200,3 +204,5 @@ async function handleChargeFailed(payload: PaystackWebhookPayload) {
     console.error('[PAYSTACK WEBHOOK] Error handling charge failure:', error);
   }
 }
+
+*/

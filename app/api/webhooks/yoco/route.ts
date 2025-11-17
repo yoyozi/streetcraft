@@ -1,3 +1,7 @@
+/*
+// YOCO WEBHOOK - COMMENTED OUT DUE TO BUILD ISSUES
+// Uncomment when environment variables are properly configured
+
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { verifyYocoPayment } from '@/lib/yoco';
@@ -6,7 +10,7 @@ import { connectDB, Order } from '@/lib/mongodb/models';
 import { revalidatePath } from 'next/cache';
 import { YocoWebhookPayload } from '@/types/webhooks';
 
-const YOCO_WEBHOOK_SECRET = process.env.YOCO_WEBHOOK_SECRET;
+// Environment variables will be accessed during request handling
 
 /**
  * Verify Yoco webhook signature
@@ -238,3 +242,5 @@ async function handlePaymentFailure(payload: YocoWebhookPayload) {
     // console.error('[YOCO WEBHOOK] Error handling payment failure:', _error);
   }
 }
+
+*/
