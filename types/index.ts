@@ -1,7 +1,6 @@
 // Determining types and getting Zod to give us runtime typing
 // look at the validators file in the lib/validators for validations that we import here
 import { z } from 'zod';
-import { Decimal } from '@prisma/client/runtime/library';
 import { insertProductSchema, 
     insertCartSchema, 
     cartItemSchema, 

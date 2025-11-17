@@ -152,9 +152,9 @@ async function handlePaymentSuccess(payload: YocoWebhookPayload) {
     const orderId = paymentData.metadata?.orderId;
 
     // console.log('[YOCO WEBHOOK] Processing successful payment:', {
-      checkoutId,
-      orderId,
-    });
+    //   checkoutId,
+    //   orderId,
+    // });
 
     if (!orderId) {
       // console.error('[YOCO WEBHOOK] No order ID in webhook payload');
