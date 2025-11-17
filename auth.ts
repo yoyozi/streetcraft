@@ -60,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async createUser(user) {
       await connectDB();
       
-      console.log('[AUTH] 👤 Creating new OAuth user:', user.email);
+      //console.log('[AUTH] 👤 Creating new OAuth user:', user.email);
       
       // Create new user from OAuth
       const newUser = await User.create({
@@ -72,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // OAuth users don't have passwords
       });
 
-      console.log('[AUTH] ✅ Created new OAuth user:', newUser.email);
+      //console.log('[AUTH] ✅ Created new OAuth user:', newUser.email);
       return newUser;
     },
 
@@ -98,7 +98,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async linkAccount(account) {
       await connectDB();
       
-      console.log('[AUTH] 🔗 Linking OAuth account:', account.provider, 'for user:', account.userId);
+      //console.log('[AUTH] 🔗 Linking OAuth account:', account.provider, 'for user:', account.userId);
       
       // Store OAuth account information
       await Account.create({
@@ -115,7 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session_state: account.session_state,
       });
       
-      console.log('[AUTH] ✅ OAuth account linked successfully');
+      //console.log('[AUTH] ✅ OAuth account linked successfully');
     },
     async unlinkAccount({ providerAccountId, provider }) {
       await connectDB();
@@ -214,11 +214,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         // Validate that credentials were provided
         if (!credentials) {
-          console.log('[AUTH] ❌ No credentials provided');
+          //console.log('[AUTH] ❌ No credentials provided');
           return null;
         }
 
-        console.log('[AUTH] 🔍 Attempting sign-in for email:', credentials.email);
+        //console.log('[AUTH] 🔍 Attempting sign-in for email:', credentials.email);
 
         // Look up user by email in the database
         await connectDB();
@@ -226,21 +226,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Check if user exists
         if (!user) {
-          console.log('[AUTH] ❌ User not found for email:', credentials.email);
+          //console.log('[AUTH] ❌ User not found for email:', credentials.email);
           return null;
         }
 
-        console.log('[AUTH] ✅ User found:', user.email, 'Role:', user.role, 'Active:', user.isActive);
+        //console.log('[AUTH] ✅ User found:', user.email, 'Role:', user.role, 'Active:', user.isActive);
 
         // Check if user account is active
         if (!user.isActive) {
-          console.log('[AUTH] ❌ Login denied - user account is inactive:', user.email);
+          //console.log('[AUTH] ❌ Login denied - user account is inactive:', user.email);
           return null;
         }
 
         // Check if user has a password set (some users might be OAuth-only)
         if (!user.password) {
-          console.log('[AUTH] ❌ User has no password set (OAuth-only account):', user.email);
+          //console.log('[AUTH] ❌ User has no password set (OAuth-only account):', user.email);
           return null;
         }
 
@@ -248,15 +248,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const isMatch = compareSync(credentials.password as string, user.password);
 
         if (!isMatch) {
-          console.log('[AUTH] ❌ Password mismatch for email:', credentials.email);
+          //console.log('[AUTH] ❌ Password mismatch for email:', credentials.email);
           return null;
         }
         
-                console.log('[AUTH] ✅ Authentication successful for:', user.email);
+                //console.log('[AUTH] ✅ Authentication successful for:', user.email);
         
         // Check if user needs to reset password
         if (user.requirePasswordReset) {
-          console.log('[AUTH] 🔐 User requires password reset:', user.email);
+          //console.log('[AUTH] 🔐 User requires password reset:', user.email);
           // Store user info in token for password reset flow
           return {
             id: user.id,
@@ -323,7 +323,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // If user is inactive, invalidate the session
         if (!user || !user.isActive) {
-          console.log('[AUTH] ❌ Session denied - user account is inactive:', token.email);
+          //console.log('[AUTH] ❌ Session denied - user account is inactive:', token.email);
           throw new Error('Account is inactive');
         }
       }
