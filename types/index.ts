@@ -19,7 +19,7 @@ export type DbProduct = {
     images: string[];
     brand: string;
     description: string;
-    rating: Decimal;
+    rating: number;
     numReviews: number;
     isFeatured: boolean;
     isFirstPage: boolean;

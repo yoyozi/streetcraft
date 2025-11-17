@@ -147,10 +147,10 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
 
     // Update order to paid
     // Note: MongoDB transactions not available in standalone mode
-    // Update product stock first
-    for (const item of order.orderitems) {
-      // Note: Stock management would need Product model - skipping for now
-      // await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.qty } });
+    // Update product stock first (placeholder for future implementation)
+    const populatedOrder = order as typeof order & { orderitems: any[] };
+    if (populatedOrder.orderitems && populatedOrder.orderitems.length > 0) {
+      // Stock management would need Product model - skipping for now
     }
     
     // Update order to paid

@@ -6,7 +6,7 @@
 import { protectCheckout } from "@/lib/middleware/checkout-protection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, User, Lock } from "lucide-react";
+// Using emojis instead of lucide-react icons due to build issues
 import Link from "next/link";
 
 export default async function CheckoutPage() {
@@ -19,8 +19,7 @@ export default async function CheckoutPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-6 w-6" />
-              Checkout
+              🛒 Checkout
             </CardTitle>
             <CardDescription>
               Welcome back, {session.user?.name}! Complete your purchase below.
@@ -28,7 +27,7 @@ export default async function CheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg border border-green-200">
-              <User className="h-5 w-5 text-green-600" />
+              <span className="text-green-600">✓</span>
               <div>
                 <p className="font-medium text-green-800">Signed in as {session.user?.email}</p>
                 <p className="text-sm text-green-600">Your cart and preferences are saved</p>

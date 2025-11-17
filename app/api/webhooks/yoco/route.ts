@@ -69,8 +69,8 @@ function verifyYocoSignature(
       Buffer.from(signatureToVerify),
       Buffer.from(expectedSignature)
     );
-  } catch (error) {
-    // console.error('[YOCO WEBHOOK] Signature verification error:', error);
+  } catch {
+    // console.error('[YOCO WEBHOOK] Signature verification error');
     return false;
   }
 }
@@ -132,8 +132,8 @@ export async function POST(req: NextRequest) {
     // Acknowledge receipt
     return NextResponse.json({ received: true }, { status: 200 });
 
-  } catch (error) {
-    // console.error('[YOCO WEBHOOK] Error processing webhook:', error);
+  } catch {
+    // console.error('[YOCO WEBHOOK] Error processing webhook');
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -234,7 +234,7 @@ async function handlePaymentFailure(payload: YocoWebhookPayload) {
     // For now, just log it
     // console.log('[YOCO WEBHOOK] Payment failure logged');
 
-  } catch (error) {
-    // console.error('[YOCO WEBHOOK] Error handling payment failure:', error);
+  } catch (_error) {
+    // console.error('[YOCO WEBHOOK] Error handling payment failure:', _error);
   }
 }
