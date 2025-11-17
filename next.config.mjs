@@ -9,6 +9,8 @@ const nextConfig = {
     // Skip type checking during build (types are checked separately)
     ignoreBuildErrors: true,
   },
+  // Enable standalone output so CI can copy .next/standalone like other projects
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
