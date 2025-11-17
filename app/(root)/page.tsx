@@ -12,6 +12,8 @@ import ViewAllProductsButton from "@/components/view-all-products-button";
 import IconBoxes from "@/components/icon-boxes";
 import DealCountdown from "@/components/deal-countdown";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const HomePage = async () => {
 
