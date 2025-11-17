@@ -1,14 +1,24 @@
 // lib/paystack.ts
 import Paystack from 'paystack';
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
+// Environment variable will be accessed during runtime, not at module level
+let paystackInstance: Paystack | null = null;
 
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error('PAYSTACK_SECRET_KEY is not defined in environment variables');
+function getPaystackInstance() {
+  const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+  
+  if (!PAYSTACK_SECRET_KEY) {
+    throw new Error('PAYSTACK_SECRET_KEY is not defined in environment variables');
+  }
+  
+  if (!paystackInstance) {
+    paystackInstance = new Paystack(PAYSTACK_SECRET_KEY);
+  }
+  
+  return paystackInstance;
 }
 
-// Initialize Paystack
-const paystack = new Paystack(PAYSTACK_SECRET_KEY);
+// Initialize Paystack instance will be created at runtime
 
 /**
  * Initialize a Paystack transaction
@@ -34,7 +44,7 @@ export async function initializePaystackTransaction({
     // Use orderId for callback if provided, otherwise use reference
     const callbackOrderId = orderId || reference;
     
-    const response = await paystack.transaction.initialize({
+    const response = await getPaystackInstance().transaction.initialize({
       email,
       amount: Math.round(amount * 100), // Convert ZAR to kobo (cents)
       reference,
@@ -77,7 +87,7 @@ export async function initializePaystackTransaction({
  */
 export async function verifyPaystackTransaction(reference: string) {
   try {
-    const response = await paystack.transaction.verify(reference);
+    const response = await getPaystackInstance().transaction.verify(reference);
 
     if (response.status && response.data.status === 'success') {
       return {
@@ -104,4 +114,4 @@ export async function verifyPaystackTransaction(reference: string) {
   }
 }
 
-export { paystack };
+// paystack instance is now managed internally
