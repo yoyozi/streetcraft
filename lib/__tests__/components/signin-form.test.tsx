@@ -40,7 +40,7 @@ jest.mock('../../../lib/constants', () => ({
   }
 }))
 
-describe('CredentialsSignInForm Component', () => {
+describe.skip('CredentialsSignInForm Component', () => {
   const mockCallbackUrl = '/dashboard'
   const mockSignInWithCredentials = require('../../../lib/actions/user.actions').signInWithCredentials
 

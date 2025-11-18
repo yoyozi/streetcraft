@@ -22,7 +22,7 @@ const AdminOrdersPage = async (props: { searchParams: Promise<{ page: string; qu
   });
 
   // Serialize orders data for client component
-  const serializedOrders = orders.data.map((order: any) => ({
+  const serializedOrders = orders.data.map((order) => ({
     id: order.id,
     createdAt: order.createdAt,
     user: { name: order.userId?.name || 'Unknown' },

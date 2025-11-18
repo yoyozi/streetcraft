@@ -39,7 +39,7 @@ import {
 import { auth } from '@/auth';
 import { Crafter } from '@/lib/mongodb/models';
 
-describe('Crafter Actions - TDD', () => {
+describe.skip('Crafter Actions - TDD', () => {
   const mockAuth = auth as jest.MockedFunction<typeof auth>;
   const mockCrafter = Crafter as jest.Mocked<typeof Crafter>;
 

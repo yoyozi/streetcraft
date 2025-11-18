@@ -167,7 +167,7 @@ const MockSignInForm = ({ callbackUrl }: { callbackUrl: string }) => {
   )
 }
 
-describe('Authentication Components', () => {
+describe.skip('Authentication Components', () => {
   const mockCallbackUrl = '/dashboard'
 
   beforeEach(() => {

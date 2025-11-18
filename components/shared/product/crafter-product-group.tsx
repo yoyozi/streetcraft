@@ -5,10 +5,16 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import ProductCard from './product-card';
 import { Button } from '@/components/ui/button';
 
+type CrafterProduct = {
+  id: string;
+  // Additional fields are allowed but not required here
+  [key: string]: unknown;
+};
+
 interface CrafterProductGroupProps {
   crafterName: string;
   productCount: number;
-  products: any[];
+  products: CrafterProduct[];
   defaultExpanded?: boolean;
 }
 
