@@ -1,20 +1,9 @@
-import Image from "next/image";
-import loader from '@/assets/loader.gif'
-
 const LoadingPage = () => {
-    return <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        width: '100vw'
-    }}>
-        <Image 
-            src={loader} 
-            width={150} 
-            style={{ height: "auto" }} 
-            alt="Loading..." />
-    </div>;
+    return (
+        <div className="flex items-center justify-center h-screen w-screen">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary" />
+        </div>
+    );
 }
 
 export default LoadingPage;

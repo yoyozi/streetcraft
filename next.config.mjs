@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  eslint: {
-    // Ignore ESLint errors during builds to allow deployment
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     // Skip type checking during build (types are checked separately)
     ignoreBuildErrors: true,

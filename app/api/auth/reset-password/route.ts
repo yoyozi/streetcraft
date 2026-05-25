@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { connectDB, User } from '@/lib/mongodb/models';
+import { prisma } from '@/lib/prisma';
 import { compareSync, hashSync } from 'bcrypt-ts-edge';
 
 export async function POST(request: NextRequest) {
@@ -32,13 +32,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await connectDB();
-
       // Hash and update new password, remove requirePasswordReset flag
       const hashedPassword = hashSync(password, 10);
-      await User.findByIdAndUpdate(userId, {
-        password: hashedPassword,
-        requirePasswordReset: false,
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+          requirePasswordReset: false,
+        },
       });
 
       return NextResponse.json(
@@ -62,10 +63,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
-
     // Get user with password
-    const user = await User.findById(session.user.id).select('+password');
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, password: true },
+    });
     
     if (!user) {
       return NextResponse.json(
@@ -84,8 +86,9 @@ export async function POST(request: NextRequest) {
 
     // Hash and update new password
     const hashedPassword = hashSync(newPassword, 10);
-    await User.findByIdAndUpdate(session.user.id, {
-      password: hashedPassword
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { password: hashedPassword },
     });
 
     return NextResponse.json(
