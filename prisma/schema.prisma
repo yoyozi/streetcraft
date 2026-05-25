@@ -1,0 +1,291 @@
+// prisma/schema.prisma — Single source of truth for database shape
+// Migrated from MongoDB/Mongoose models to PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================================
+// NextAuth required tables (for @auth/prisma-adapter)
+// ============================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([identifier, token])
+  @@index([expires])
+}
+
+// ============================================================
+// Application models
+// ============================================================
+
+model User {
+  id                   String    @id @default(cuid())
+  name                 String    @default("NO_NAME")
+  email                String    @unique
+  emailVerified        DateTime?
+  password             String?
+  image                String?
+  role                 String    @default("user")
+  phoneNumber          String?   @unique
+  phoneVerified        Boolean   @default(false)
+  isActive             Boolean   @default(true)
+  requirePasswordReset Boolean   @default(false)
+  address              Json?
+  paymentMethod        String?
+  crafterId            String?
+
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  crafterProfile Crafter?
+  orders       Order[]
+  reviews      Review[]
+  carts        Cart[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([isActive])
+  @@index([crafterId])
+}
+
+enum CrafterStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model Crafter {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  businessName     String
+  description      String?
+  location         String
+  mobile           String
+  whatsappNumber   String?
+  city             String?
+  province         String?
+  profileImage     String?
+
+  status           CrafterStatus @default(PENDING)
+  identityVerified Boolean       @default(false)
+  isActive         Boolean       @default(true)
+
+  approvedAt       DateTime?
+  rejectedReason   String?
+
+  // Relations
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([isActive])
+  @@index([mobile])
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model Product {
+  id                  String    @id @default(cuid())
+  name                String
+  slug                String    @unique
+  category            String
+  images              String[]
+  description         String
+  price               Float     @default(0)
+  costPrice           Float     @default(0)
+  priceNeedsReview    Boolean   @default(false)
+  lastCostPriceUpdate DateTime?
+  weight              Float     @default(0)
+  availability        Int       @default(3)
+  rating              Float     @default(0)
+  numReviews          Int       @default(0)
+  isFeatured          Boolean   @default(false)
+  isFirstPage         Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  banner              String?
+  tags                String[]
+
+  // Relations
+  crafterId  String?
+  crafter    Crafter?    @relation(fields: [crafterId], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isFeatured])
+  @@index([isFirstPage])
+  @@index([crafterId])
+  @@index([isActive])
+}
+
+model Cart {
+  id            String     @id @default(cuid())
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionCartId String
+  items         CartItem[]
+  itemsPrice    Float      @default(0)
+  totalPrice    Float      @default(0)
+  shippingPrice Float      @default(0)
+  taxPrice      Float      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionCartId])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  cart      Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  name      String
+  slug      String
+  qty       Int
+  image     String
+  price     Float
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Order {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  shippingAddress Json
+  paymentMethod   String
+  paymentResult   Json?
+  itemsPrice      Float
+  shippingPrice   Float
+  taxPrice        Float
+  totalPrice      Float
+  totalPriceUsd   Float?
+  exchangeRate    Float?
+  eftEmailSent    Boolean   @default(false)
+  eftEmailSentAt  DateTime?
+  isPaid          Boolean   @default(false)
+  paidAt          DateTime?
+  isDelivered     Boolean   @default(false)
+  deliveredAt     DateTime?
+
+  // Relations
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPaid])
+  @@index([isDelivered])
+  @@index([createdAt(sort: Desc)])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  price     Float
+  name      String
+  slug      String
+  image     String
+
+  @@unique([orderId, productId])
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Review {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+  rating            Int
+  title             String
+  description       String
+  isVerifiedPurchase Boolean @default(false)
+  deliveredAt       DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt(sort: Desc)])
+}

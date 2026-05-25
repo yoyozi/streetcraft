@@ -1,152 +1,79 @@
 import { Order } from "@/types";
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Img,
-  Preview,
-  Row,
-  Section,
-  Tailwind,
-  Text,
-} from '@react-email/components';
-import sampleData from '@/db/sample-data';
-require('dotenv').config();
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
-
-PurchaseReceiptEmail.PreviewProps = {
-  order: {
-    id: crypto.randomUUID(),
-    userId: '123',
-    user: {
-      name: 'John Doe',
-      email: 'bS8Rn@example.com',
-    },
-    paymentMethod: 'Stripe',
-    shippingAddress: {
-      fullName: 'John Doe',
-      streetAddress: '123 Main St',
-      city: 'New York',
-      postalCode: '10001',
-      country: 'US',
-    },
-    createdAt: new Date(),
-    totalPrice: '100',
-    taxPrice: '10',
-    shippingPrice: '10',
-    itemsPrice: '80',
-    orderItems: sampleData.products.map((x) => ({
-      name: x.name,
-      orderId: '123',
-      productId: '123',
-      slug: x.slug,
-      qty: x.stock,
-      image: x.images[0],
-      price: x.price.toString(),
-    })),
-    isDelivered: true,
-    deliveredAt: new Date(),
-    isPaid: true,
-    paidAt: new Date(),
-    paymentResult: {
-      id: '123',
-      status: 'succeeded',
-      pricePaid: '12',
-      email_address: 'bS8Rn@example.com',
-      currency: 'ZAR',
-    },
-  },
-} satisfies OrderInformationProps;
-
-type OrderInformationProps = {
-  order: Order;
-};
-
-
-import { formatCurrency } from '@/lib/utils';
-import { formatDateTime } from '@/lib/utils';
-
-export default function PurchaseReceiptEmail({ order }: {order: Order}) {
+export default function PurchaseReceiptEmail({ order }: { order: Order }) {
   return (
-    <Html>
-      <Preview>View order receipt</Preview>
-      <Tailwind>
-        <Head />
-        <Body className='font-sans bg-white'>
-          <Container className='max-w-xl'>
-            <Heading>Purchase Receipt</Heading>
-            <Section>
-              <Row>
-                <Column>
-                  <Text className='mb-0 text-gray-500 whitespace-nowrap text-nowrap mr-4'>
-                    Order ID
-                  </Text>
-                  <Text className='mt-0 mr-4'>{order.id.toString()}</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 text-gray-500 whitespace-nowrap text-nowrap mr-4'>
-                    Purchased On
-                  </Text>
-                  <Text className='mt-0 mr-4'>
-                    {formatDateTime(order.createdAt).dateTime}
-                  </Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 text-gray-500 whitespace-nowrap text-nowrap mr-4'>
-                    Price Paid
-                  </Text>
-                  <Text className='mt-0 mr-4'>
-                    {formatCurrency(order.totalPrice)}
-                  </Text>
-                </Column>
-              </Row>
-            </Section>
-            <Section className='border border-solid border-gray-500 rounded-lg p-4 md:p-6 my-4'>
-              {order.orderItems.map((item) => (
-                <Row key={item.productId} className='mt-8'>
-                  <Column className='w-20'>
-                    <Img
-                      width='80'
+    <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#fff', padding: '20px' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>Purchase Receipt</h1>
+
+        <table style={{ width: '100%', marginBottom: '20px' }}>
+          <tbody>
+            <tr>
+              <td style={{ padding: '4px 8px' }}>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Order ID</p>
+                <p style={{ margin: 0 }}>{order.id.toString()}</p>
+              </td>
+              <td style={{ padding: '4px 8px' }}>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Purchased On</p>
+                <p style={{ margin: 0 }}>{formatDateTime(order.createdAt).dateTime}</p>
+              </td>
+              <td style={{ padding: '4px 8px' }}>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Price Paid</p>
+                <p style={{ margin: 0 }}>{formatCurrency(order.totalPrice)}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style={{ border: '1px solid #d1d5db', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+          {order.orderItems.map((item) => (
+            <table key={item.productId} style={{ width: '100%', marginBottom: '12px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '80px', verticalAlign: 'top' }}>
+                    <img
+                      width="80"
                       alt={item.name}
-                      className='rounded'
+                      style={{ borderRadius: '4px' }}
                       src={
                         item.image.startsWith('/')
                           ? `${process.env.NEXT_PUBLIC_SERVER_URL}${item.image}`
                           : item.image
                       }
                     />
-                  </Column>
-                  <Column className='align-top'>
-                    <Text className='mx-2 my-0'>
-                      {item.name} x {item.qty}
-                    </Text>
-                  </Column>
-                  <Column align='right' className='align-top'>
-                    <Text className='m-0 '>{formatCurrency(item.price)}</Text>
-                  </Column>
-                </Row>
-              ))}
+                  </td>
+                  <td style={{ verticalAlign: 'top', padding: '0 8px' }}>
+                    {item.name} x {item.qty}
+                  </td>
+                  <td style={{ verticalAlign: 'top', textAlign: 'right' }}>
+                    {formatCurrency(item.price)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ))}
+
+          <table style={{ width: '100%', borderTop: '1px solid #d1d5db', paddingTop: '8px' }}>
+            <tbody>
               {[
                 { name: 'Items', price: order.itemsPrice },
                 { name: 'Tax', price: order.taxPrice },
                 { name: 'Shipping', price: order.shippingPrice },
                 { name: 'Total', price: order.totalPrice },
               ].map(({ name, price }) => (
-                <Row key={name} className='py-1'>
-                  <Column align='right'>{name}:</Column>
-                  <Column align='right' width={70} className='align-top'>
-                    <Text className='m-0'>{formatCurrency(price)}</Text>
-                  </Column>
-                </Row>
+                <tr key={name}>
+                  <td style={{ textAlign: 'right', padding: '2px 8px' }}>{name}:</td>
+                  <td style={{ textAlign: 'right', width: '80px', padding: '2px 0' }}>
+                    {formatCurrency(price)}
+                  </td>
+                </tr>
               ))}
-            </Section>
-          </Container>
-        </Body>
-      </Tailwind>
-    </Html>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
 

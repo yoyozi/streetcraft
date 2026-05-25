@@ -1,8 +1,7 @@
 'use server';
-import { connectDB, Product } from '../mongodb/models';
+import { prisma } from '@/lib/prisma';
 import { FIRST_PAGE_PRODUCTS_LIMIT, PAGE_SIZE } from "../constants";
-import { insertProductSchema, updateProductSchema } from '../validators';
-import { auth } from '@/auth';
+import { insertProductSchema, updateProductSchema } from '@/lib/validations/product';
 import { UTApi } from 'uploadthing/server';
 
 // ============================================================================
@@ -11,105 +10,79 @@ import { UTApi } from 'uploadthing/server';
 // These functions are used in customer-facing features and should NOT be
 // modified for admin requirements to avoid affecting user experience/server
 
-// Bring in the prisma to JS object converter
 import { formatError } from "../utils";
 import { revalidatePath } from 'next/cache';
-import mongoose from 'mongoose';
 import z from 'zod';
+import { checkAdminAuth } from './auth-actions';
 
 // Helper function to serialize product for client components
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeProduct(product: any) {
-  // Use toObject with virtuals to get the id field
-  const obj = product.toObject ? product.toObject({ virtuals: true }) : product;
-  
-  // Ensure _id is always a string
-  const productId = obj._id?.toString() || obj.id?.toString();
-  
   return {
-    ...obj,
-    _id: productId,
-    id: productId,
-    price: obj.price?.toString() || '0',
-    costPrice: obj.costPrice || 0,
-    priceNeedsReview: obj.priceNeedsReview || false,
-    lastCostPriceUpdate: obj.lastCostPriceUpdate?.toString() || null,
-    rating: obj.rating?.toString() || '0',
-    createdAt: obj.createdAt?.toString(),
-    updatedAt: obj.updatedAt?.toString(),
-    images: obj.images || [],
-    crafter: obj.crafter ? (typeof obj.crafter === 'object' ? {
-      _id: obj.crafter._id?.toString(),
-      name: obj.crafter.name
-    } : obj.crafter.toString()) : null,
-    category: obj.category ? (typeof obj.category === 'object' ? {
-      _id: obj.category._id?.toString(),
-      name: obj.category.name
-    } : obj.category.toString()) : null,
+    ...product,
+    _id: product.id,
+    id: product.id,
+    price: product.price?.toString() || '0',
+    costPrice: product.costPrice || 0,
+    priceNeedsReview: product.priceNeedsReview || false,
+    lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
+    rating: product.rating?.toString() || '0',
+    createdAt: product.createdAt?.toISOString(),
+    updatedAt: product.updatedAt?.toISOString(),
+    images: product.images || [],
+    crafter: product.crafter ? {
+      id: product.crafter.id,
+      name: product.crafter.businessName,
+    } : null,
   };
 }
 
 // Initialize UploadThing API
 const utapi = new UTApi();
 
-// Helper to check admin authorization
-async function checkAdminAuth() {
-  const session = await auth();
-  if (!session || session.user?.role !== 'admin') {
-    return { authorized: false, error: 'Unauthorized: Admin access required' };
-  }
-  return { authorized: true };
-}
-
 // GET LATEST PRODUCTS FOR THE HOME PAGE
-// returns prisma object we need to convert it into a Javascript object
 export async function getLatestProducts() {
-    await connectDB();
-    
     // First, try to get products marked for first page (only active products)
-    let data = await Product.find({ isFirstPage: true, isActive: true })
-        .limit(FIRST_PAGE_PRODUCTS_LIMIT)
-        .sort({ createdAt: -1 })
-        .exec();
+    let data = await prisma.product.findMany({
+        where: { isFirstPage: true, isActive: true },
+        take: FIRST_PAGE_PRODUCTS_LIMIT,
+        orderBy: { createdAt: 'desc' },
+    });
 
     // If no products are marked for first page, fall back to latest active products
     if (data.length === 0) {
-        data = await Product.find({ isActive: true })
-            .limit(FIRST_PAGE_PRODUCTS_LIMIT)
-            .sort({ createdAt: -1 })
-            .exec();
+        data = await prisma.product.findMany({
+            where: { isActive: true },
+            take: FIRST_PAGE_PRODUCTS_LIMIT,
+            orderBy: { createdAt: 'desc' },
+        });
     }
 
-    return data.map((p) => {
-      const obj = p.toObject();
-      return {
-        ...obj,
-        _id: String(obj._id), // More robust conversion to string
+    return data.map((p) => ({
+        ...p,
+        _id: p.id,
         price: p.price.toString(),
         rating: p.rating?.toString() || '0',
-        createdAt: p.createdAt.toString(),
-        updatedAt: obj.updatedAt?.toString(),
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt?.toISOString(),
         images: p.images || [],
-        crafter: obj.crafter ? obj.crafter.toString() : null,
-      };
-    });
-    
+        crafter: p.crafterId || null,
+    }));
 };
 
 // GET A SINGLE PRODUCT BY ITS SLUG
 export async function getProductBySlug(slug: string) {
-  await connectDB();
-  const data = await Product.findOne({ slug, isActive: true });
+  const data = await prisma.product.findFirst({
+    where: { slug, isActive: true },
+  });
   if (!data) return null;
   
-  const plainProduct = data.toObject();
   return {
-    ...plainProduct,
-    _id: String(plainProduct._id), // Convert ObjectId to string
-    price: plainProduct.price.toString(),
-    rating: plainProduct.rating?.toString() || '0',
-    createdAt: plainProduct.createdAt.toString(),
-    images: plainProduct.images || [],
+    ...data,
+    _id: data.id,
+    price: data.price.toString(),
+    rating: data.rating?.toString() || '0',
+    createdAt: data.createdAt.toISOString(),
+    images: data.images || [],
   };
 }
 
@@ -133,69 +106,55 @@ export async function getAllProducts({
   rating?: string;
   sort?: string;
   }) {
-    await connectDB();
-
-    // Build the filter object
-    const filter: {
-      name?: { $regex: string; $options: string };
-      category?: string;
-      price?: { $gte: number; $lte: number };
-      rating?: { $gte: number };
-      isActive?: boolean;
-    } = {};
+    const where: any = { isActive: true };
     
-    // Only show active products to customers
-    filter.isActive = true;
-    
-    // Query filter
+    // Query filter (case-insensitive search)
     if (query && query !== 'all') {
-      filter.name = { $regex: query, $options: 'i' };
+      where.name = { contains: query, mode: 'insensitive' };
     }
     
     // Category filter
     if (category && category !== 'all') {
-      filter.category = category;
+      where.category = category;
     }
     
     // Price filter
     if (price && price !== 'all') {
       const [minPrice, maxPrice] = price.split('-').map(Number);
-      filter.price = { $gte: minPrice, $lte: maxPrice };
+      where.price = { gte: minPrice, lte: maxPrice };
     }
     
     // Rating filter
     if (rating && rating !== 'all') {
-      filter.rating = { $gte: Number(rating) };
+      where.rating = { gte: Number(rating) };
     }
 
     // Build sort object
-    let sortObj: { createdAt?: -1; price?: 1 | -1; rating?: -1 } = { createdAt: -1 };
-    if (sort === 'lowest') sortObj = { price: 1 };
-    else if (sort === 'highest') sortObj = { price: -1 };
-    else if (sort === 'rating') sortObj = { rating: -1 };
+    let orderBy: Record<string, 'asc' | 'desc'> = { createdAt: 'desc' };
+    if (sort === 'lowest') orderBy = { price: 'asc' };
+    else if (sort === 'highest') orderBy = { price: 'desc' };
+    else if (sort === 'rating') orderBy = { rating: 'desc' };
 
     // Get data and count
     const [data, dataCount] = await Promise.all([
-      Product.find(filter)
-        .sort(sortObj)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec(),
-      Product.countDocuments(filter)
+      prisma.product.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.product.count({ where })
     ]);
 
-    const products = data.map((p) => {
-      const obj = p.toObject();
-      return {
-        ...obj,
-        _id: String(obj._id), // More robust conversion to string
+    const products = data.map((p) => ({
+        ...p,
+        _id: p.id,
         price: p.price.toString(),
         rating: p.rating?.toString() || '0',
-        createdAt: p.createdAt.toString(),
+        createdAt: p.createdAt.toISOString(),
         images: p.images || [],
-        crafter: obj.crafter?.toString() || null,
-      };
-    });
+        crafter: p.crafterId || null,
+    }));
 
     return {
         data: products,
@@ -212,46 +171,27 @@ export async function getAdminProductsGroupedByCrafter({
   query?: string;
   page?: number;
 }) {
-  await connectDB();
-
-  // Set pagination limit
   const limit = PAGE_SIZE;
 
-  // Build the filter object for products
-  const productFilter: {
-    name?: { $regex: string; $options: string };
-  } = {};
-  
-  // Query filter
+  const where: any = {};
   if (query && query !== 'all') {
-    productFilter.name = { $regex: query, $options: 'i' };
+    where.name = { contains: query, mode: 'insensitive' };
   }
 
-  // Get all products matching the filter and populate crafter
   const [allProducts, dataCount] = await Promise.all([
-    Product.find(productFilter)
-      .populate({
-        path: 'crafter',
-        select: 'name',
-        model: 'Crafter'
-      }).exec(),
-    Product.countDocuments(productFilter)
+    prisma.product.findMany({
+      where,
+      include: { crafter: { select: { id: true, businessName: true } } },
+    }),
+    prisma.product.count({ where })
   ]);
-
-  //console.log('Raw products data:', JSON.stringify(allProducts.slice(0, 1), null, 2));
 
   // Group products by crafter
   const groupedByCrafter = new Map<string, any>();
-  //console.log('Processing products:', allProducts.length);
   
   allProducts.forEach((product) => {
-    // Handle populated crafter object
-    const crafterObj = (product as any).crafter;
-    const crafterId = crafterObj?.id || 'unassigned';
-    const crafterName = crafterObj?.name || 'Unassigned';
-    
-    //console.log(`Product: ${product.name}, Crafter ID: ${crafterId}, Crafter Name: ${crafterName}`);
-    //console.log('Crafter object:', crafterObj);
+    const crafterId = product.crafter?.id || 'unassigned';
+    const crafterName = product.crafter?.businessName || 'Unassigned';
     
     if (!groupedByCrafter.has(crafterId)) {
       groupedByCrafter.set(crafterId, {
@@ -263,32 +203,25 @@ export async function getAdminProductsGroupedByCrafter({
     }
     
     const group = groupedByCrafter.get(crafterId);
-    const productObj = product.toObject();
-    
-    // Convert crafter to plain object if it exists
-    if (productObj.crafter) {
-      productObj.crafter = {
-        id: productObj.crafter._id?.toString() || productObj.crafter.id,
-        name: productObj.crafter.name
-      };
-    }
     
     group.products.push({
-      ...productObj,
-      _id: String(productObj._id), // Convert ObjectId to string
+      ...product,
+      _id: product.id,
       price: product.price.toString(),
       costPrice: product.costPrice || 0,
       priceNeedsReview: product.priceNeedsReview || false,
-      lastCostPriceUpdate: product.lastCostPriceUpdate?.toString() || null,
-      isActive: product.isActive !== undefined ? product.isActive : true,
+      lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
+      isActive: product.isActive,
       rating: product.rating?.toString() || '0',
-      createdAt: product.createdAt.toString(),
+      createdAt: product.createdAt.toISOString(),
       images: product.images || [],
+      crafter: product.crafter ? {
+        id: product.crafter.id,
+        name: product.crafter.businessName,
+      } : null,
     });
     group.productCount++;
   });
-
-  //console.log('Groups created:', Array.from(groupedByCrafter.keys()));
 
   // Always include "Unassigned" section even if empty, so users can drag products to it
   if (!groupedByCrafter.has('unassigned')) {
@@ -309,7 +242,7 @@ export async function getAdminProductsGroupedByCrafter({
     data: paginatedGroups,
     totalPages: Math.ceil(totalGroups / limit),
     totalProducts: dataCount,
-    query, // Include query for client-side search detection
+    query,
   };
 }
 
@@ -318,25 +251,22 @@ export async function getAdminProductsGroupedByCrafter({
 // Delete Product (ADMIN ONLY)
 export async function deleteProduct(id: string): Promise<{ success: boolean; message?: string; error?: string; data?: { id: string; name: string } }> {
     try {
-      // Check admin authorization
       const authCheck = await checkAdminAuth();
       if (!authCheck.authorized) {
         return { success: false, error: authCheck.error };
       }
 
-      await connectDB();
-      const productExists = await Product.findById(id);
+      const product = await prisma.product.findUnique({ where: { id } });
+      if (!product) throw new Error('Product not found');
   
-      if (!productExists) throw new Error('Product not found');
-  
-      const deletedProduct = await Product.findByIdAndDelete(id);
+      await prisma.product.delete({ where: { id } });
   
       revalidatePath('/admin/products');
   
       return {
         success: true,
         message: 'Product deleted successfully',
-        data: JSON.parse(JSON.stringify(deletedProduct)),
+        data: { id: product.id, name: product.name },
       };
     } catch (error) {
       const errorResponse = formatError(error);
@@ -349,19 +279,21 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; mes
 // Create Product
 export async function createProduct(data: z.infer<typeof insertProductSchema>): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
     try {
-      // Check admin authorization
       const authCheck = await checkAdminAuth();
       if (!authCheck.authorized) {
         return { success: false, error: authCheck.error };
       }
 
-      await connectDB();
-      // Validate and create product
-      const product = insertProductSchema.parse(data);
+      // Validate
+      const parsed = insertProductSchema.safeParse(data);
+      if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0].message };
+      }
+      const product = parsed.data;
       
       // Check if trying to set isFirstPage to true
       if (product.isFirstPage) {
-        const firstPageCount = await Product.countDocuments({ isFirstPage: true });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -371,14 +303,31 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>): 
         }
       }
       
-      const createdProduct = await Product.create(product);
+      const createdProduct = await prisma.product.create({
+        data: {
+          name: product.name,
+          slug: product.slug,
+          category: product.category,
+          description: product.description,
+          images: product.images,
+          isFeatured: product.isFeatured,
+          isFirstPage: product.isFirstPage,
+          banner: product.banner,
+          price: Number(product.price),
+          costPrice: Number(product.costPrice),
+          priceNeedsReview: product.priceNeedsReview ?? false,
+          availability: product.availability ?? 3,
+          tags: product.tags ?? [],
+          crafterId: product.crafterId || null,
+        },
+      });
   
       revalidatePath('/admin/products');
   
       return {
         success: true,
         message: 'Product created successfully',
-        data: JSON.parse(JSON.stringify(createdProduct)),
+        data: createdProduct,
       };
     } catch (error) {
       const errorResponse = formatError(error);
@@ -391,22 +340,24 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>): 
 // Update Product
 export async function updateProduct(data: z.infer<typeof updateProductSchema>): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
     try {
-      // Check admin authorization
       const authCheck = await checkAdminAuth();
       if (!authCheck.authorized) {
         return { success: false, error: authCheck.error };
       }
 
-      await connectDB();
-      // Validate and find product
-      const product = updateProductSchema.parse(data);
-      const productExists = await Product.findById(product.id);
-  
+      // Validate
+      const parsed = updateProductSchema.safeParse(data);
+      if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0].message };
+      }
+      const product = parsed.data;
+
+      const productExists = await prisma.product.findUnique({ where: { id: product.id } });
       if (!productExists) throw new Error('Product not found');
   
       // Check if trying to set isFirstPage to true when it wasn't before
       if (product.isFirstPage && !productExists.isFirstPage) {
-        const firstPageCount = await Product.countDocuments({ isFirstPage: true });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -417,14 +368,32 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>): 
       }
   
       // Update product
-      const updatedProduct = await Product.findByIdAndUpdate(product.id, product, { new: true });
+      const updatedProduct = await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          name: product.name,
+          slug: product.slug,
+          category: product.category,
+          description: product.description,
+          images: product.images,
+          isFeatured: product.isFeatured,
+          isFirstPage: product.isFirstPage,
+          banner: product.banner,
+          price: Number(product.price),
+          costPrice: Number(product.costPrice),
+          priceNeedsReview: product.priceNeedsReview,
+          availability: product.availability,
+          tags: product.tags,
+          crafterId: product.crafterId || null,
+        },
+      });
   
       revalidatePath('/admin/products');
   
       return {
         success: true,
         message: 'Product updated successfully',
-        data: JSON.parse(JSON.stringify(updatedProduct)),
+        data: updatedProduct,
       };
     } catch (error) {
       const errorResponse = formatError(error);
@@ -435,99 +404,85 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>): 
 
 // Get single product by id
 export async function getProductById(productId: string) {
-  await connectDB();
-  const data = await Product.findById(productId);
+  const data = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { crafter: { select: { id: true, businessName: true } } },
+  });
   if (!data) return null;
   
-  const plainProduct = data.toObject();
-  
-  // Convert crafter to plain object if it exists
-  if (plainProduct.crafter) {
-    plainProduct.crafter = {
-      id: plainProduct.crafter._id?.toString() || plainProduct.crafter.id,
-      name: plainProduct.crafter.name
-    };
-  }
-  
   return {
-    ...plainProduct,
-    _id: String(plainProduct._id), // Convert ObjectId to string
-    price: plainProduct.price.toString(),
-    costPrice: plainProduct.costPrice?.toString() || '0',
-    rating: plainProduct.rating?.toString() || '0',
-    createdAt: plainProduct.createdAt.toString(),
-    updatedAt: plainProduct.updatedAt?.toString(),
-    images: plainProduct.images || [],
-    banner: plainProduct.banner ?? null, // Convert undefined to null
+    ...data,
+    _id: data.id,
+    price: data.price.toString(),
+    costPrice: data.costPrice?.toString() || '0',
+    rating: data.rating?.toString() || '0',
+    createdAt: data.createdAt.toISOString(),
+    updatedAt: data.updatedAt?.toISOString(),
+    images: data.images || [],
+    banner: data.banner ?? null,
+    crafter: data.crafter ? {
+      id: data.crafter.id,
+      name: data.crafter.businessName,
+    } : null,
   };
 }
 
 
 // Get all crafters for drag-and-drop (ADMIN ONLY)
 export async function getAllCraftersForDrop() {
-  await connectDB();
-  const Crafter = mongoose.models.Crafter;
-  
-  const crafters = await Crafter.find({ isActive: true })
-    .select('_id name')
-    .lean()
-    .exec();
+  const crafters = await prisma.crafter.findMany({
+    where: { isActive: true },
+    select: { id: true, businessName: true },
+  });
     
-  const result = crafters.map((crafter: any) => ({
-    id: crafter._id.toString(),
-    name: crafter.name,
+  return crafters.map((crafter) => ({
+    id: crafter.id,
+    name: crafter.businessName,
   }));
-  
-  //console.log('All crafters for drop:', result);
-  return result;
 }
 
-// Get all the categories
+// Get all the categories (aggregated from products)
 export async function getAllCategories() {
-    await connectDB();
-    const data = await Product.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $project: { category: '$_id', _count: '$count', _id: 0 } }
-    ]).sort({ category: 1 });
-    return data.map(item => ({ category: item.category, _count: { count: item.count } }));
+    const data = await prisma.product.groupBy({
+      by: ['category'],
+      _count: { category: true },
+      orderBy: { category: 'asc' },
+    });
+    return data.map(item => ({ category: item.category, _count: { count: item._count.category } }));
 }
 
 
 // Get featured products
 export async function getFeaturedProducts() {
-    await connectDB();
-    const data = await Product.find({ isFeatured: true, isActive: true })
-        .sort({ createdAt: -1 })
-        .limit(4)
-        .exec();
+    const data = await prisma.product.findMany({
+        where: { isFeatured: true, isActive: true },
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+    });
     
-    return data.map((p) => {
-      const obj = p.toObject();
-      return {
-        ...obj,
-        _id: String(obj._id), // More robust conversion to string
+    return data.map((p) => ({
+        ...p,
+        _id: p.id,
         price: p.price.toString(),
         rating: p.rating?.toString() || '0',
-        createdAt: p.createdAt.toString(),
-        updatedAt: obj.updatedAt?.toString(),
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt?.toISOString(),
         images: p.images || [],
-        crafter: obj.crafter ? obj.crafter.toString() : null,
-      };
-    });
+        crafter: p.crafterId || null,
+    }));
 }
 
 
 // Toggle product isFirstPage status (ADMIN ONLY)
 export async function toggleProductFirstPage(productId: string): Promise<{ success: boolean; message: string; error?: string }> {
     try {
-      await connectDB();
-      const product = await Product.findById(productId);
+      const product = await prisma.product.findUnique({ where: { id: productId } });
   
       if (!product) throw new Error('Product not found');
   
       // If trying to set to true, check the limit
       if (!product.isFirstPage) {
-        const firstPageCount = await Product.countDocuments({ isFirstPage: true });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -537,8 +492,10 @@ export async function toggleProductFirstPage(productId: string): Promise<{ succe
         }
       }
   
-      // Toggle the status
-      await Product.findByIdAndUpdate(productId, { isFirstPage: !product.isFirstPage });
+      await prisma.product.update({
+        where: { id: productId },
+        data: { isFirstPage: !product.isFirstPage },
+      });
   
       revalidatePath('/admin/products');
   
@@ -550,37 +507,30 @@ export async function toggleProductFirstPage(productId: string): Promise<{ succe
       };
     } catch (error) {
       const errorResponse = formatError(error);
-      return { success: false, error: errorResponse.message };
+      return { success: false, message: errorResponse.message, error: errorResponse.message };
     }
 }
 
 // Update Product Crafter (ADMIN ONLY)
 export async function updateProductCrafter(productId: string, crafterId: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Validate input
     if (!productId || !crafterId) {
       return { success: false, error: 'Product ID and Crafter ID are required' };
     }
 
-    // Check admin authorization
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, error: authCheck.error };
     }
 
-    await connectDB();
-    
-    // Handle unassigned case
     const updateData = crafterId === 'unassigned' 
-      ? { crafter: null } 
-      : { crafter: crafterId };
+      ? { crafterId: null } 
+      : { crafterId: crafterId };
     
-    // Update the product's crafter
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: updateData,
+    });
 
     if (!updatedProduct) {
       return { success: false, error: 'Product not found' };
@@ -590,10 +540,7 @@ export async function updateProductCrafter(productId: string, crafterId: string)
       ? 'Product unassigned successfully' 
       : 'Product moved to new crafter successfully';
 
-    return {
-      success: true,
-      message,
-    };
+    return { success: true, message };
   } catch (error) {
     const errorResponse = formatError(error);
     return { success: false, error: errorResponse.message };
@@ -603,18 +550,15 @@ export async function updateProductCrafter(productId: string, crafterId: string)
 // Delete Product Images from UploadThing (ADMIN ONLY)
 export async function deleteProductImages(images: string[]): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Validate input
     if (!Array.isArray(images) || images.length === 0) {
       return { success: false, error: 'No images provided for deletion' };
     }
 
-    // Check admin authorization
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, error: authCheck.error };
     }
 
-    // Validate all URLs are strings
     const validUrls = images.filter(url => typeof url === 'string' && url.trim().length > 0);
     if (validUrls.length === 0) {
       return { success: false, error: 'No valid image URLs provided' };
@@ -633,7 +577,6 @@ export async function deleteProductImages(images: string[]): Promise<{ success: 
       return { success: false, error: 'No valid UploadThing file keys found in provided URLs' };
     }
 
-    // Delete files from UploadThing
     await utapi.deleteFiles(fileKeys);
 
     return {
@@ -656,10 +599,9 @@ export async function deleteProductImages(images: string[]): Promise<{ success: 
 export async function getAllProductsByLinkedCrafter(): Promise<{
   success: boolean;
   message: string;
-  data: Product[] | null;
+  data: any[] | null;
 }> {
   try {
-    // Get linked crafter ID from auth-utils
     const { getLinkedCrafterId } = await import('@/lib/auth-utils');
     const crafterId = await getLinkedCrafterId();
     
@@ -671,14 +613,12 @@ export async function getAllProductsByLinkedCrafter(): Promise<{
       };
     }
     
-    // Get all products for this crafter
-    await connectDB();
-    const products = await Product.find({ crafter: crafterId })
-      .populate('category', 'name')
-      .populate('crafter', 'name')
-      .sort({ createdAt: -1 });
+    const products = await prisma.product.findMany({
+      where: { crafterId },
+      include: { crafter: { select: { id: true, businessName: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
     
-    // Serialize products for client components
     const serializedProducts = products.map(serializeProduct);
     
     return {
@@ -705,74 +645,38 @@ export async function updateProductAvailability(
   availability: number
 ): Promise<{ success: boolean; message: string }> {
   try {
-    //console.log('[UPDATE AVAILABILITY] Starting update for product:', productId, 'availability:', availability);
-    
-    // Get linked crafter ID
     const { getLinkedCrafterId } = await import('@/lib/auth-utils');
     const crafterId = await getLinkedCrafterId();
     
-    //console.log('[UPDATE AVAILABILITY] Crafter ID:', crafterId);
-    
     if (!crafterId) {
-      return {
-        success: false,
-        message: 'No crafter account linked to your user'
-      };
+      return { success: false, message: 'No crafter account linked to your user' };
     }
     
-    // Validate availability value
     if (availability < -1) {
-      return {
-        success: false,
-        message: 'Invalid availability value'
-      };
+      return { success: false, message: 'Invalid availability value' };
     }
     
-    await connectDB();
-    
-    // Find product and verify it belongs to this crafter
-    //console.log('[UPDATE AVAILABILITY] Finding product by ID:', productId);
-    const product = await Product.findById(productId);
-    
-    //console.log('[UPDATE AVAILABILITY] Product found:', product ? 'Yes' : 'No');
+    const product = await prisma.product.findUnique({ where: { id: productId } });
     
     if (!product) {
-      return {
-        success: false,
-        message: 'Product not found'
-      };
+      return { success: false, message: 'Product not found' };
     }
     
-    //console.log('[UPDATE AVAILABILITY] Product crafter:', product.crafter?.toString());
-    //console.log('[UPDATE AVAILABILITY] Expected crafter:', crafterId);
-    
-    if (product.crafter?.toString() !== crafterId) {
-      return {
-        success: false,
-        message: 'You can only update your own products'
-      };
+    if (product.crafterId !== crafterId) {
+      return { success: false, message: 'You can only update your own products' };
     }
     
-    // Update only the availability field
-    //console.log('[UPDATE AVAILABILITY] Updating availability from', product.availability, 'to', availability);
-    product.availability = availability;
-    await product.save();
-    
-    //console.log('[UPDATE AVAILABILITY] Product saved successfully');
+    await prisma.product.update({
+      where: { id: productId },
+      data: { availability },
+    });
     
     revalidatePath('/crafter/availability');
     revalidatePath('/crafter/products');
     
-    return {
-      success: true,
-      message: 'Availability updated successfully'
-    };
-  } catch (error) {
-    //console.error('Error updating product availability:', error);
-    return {
-      success: false,
-      message: 'Failed to update availability'
-    };
+    return { success: true, message: 'Availability updated successfully' };
+  } catch {
+    return { success: false, message: 'Failed to update availability' };
   }
 }
 
@@ -785,69 +689,43 @@ export async function updateProductCostPrice(
   costPrice: number
 ): Promise<{ success: boolean; message: string }> {
   try {
-    // Get linked crafter ID
     const { getLinkedCrafterId } = await import('@/lib/auth-utils');
     const crafterId = await getLinkedCrafterId();
     
     if (!crafterId) {
-      return {
-        success: false,
-        message: 'No crafter account linked to your user'
-      };
+      return { success: false, message: 'No crafter account linked to your user' };
     }
     
-    // Validate costPrice value
     if (costPrice < 0) {
-      return {
-        success: false,
-        message: 'Cost price must be 0 or greater'
-      };
+      return { success: false, message: 'Cost price must be 0 or greater' };
     }
     
-    await connectDB();
-    
-    // Find product and verify it belongs to this crafter
-    const product = await Product.findById(productId);
+    const product = await prisma.product.findUnique({ where: { id: productId } });
     
     if (!product) {
-      return {
-        success: false,
-        message: 'Product not found'
-      };
+      return { success: false, message: 'Product not found' };
     }
     
-    if (product.crafter?.toString() !== crafterId) {
-      return {
-        success: false,
-        message: 'You can only update your own products'
-      };
+    if (product.crafterId !== crafterId) {
+      return { success: false, message: 'You can only update your own products' };
     }
     
-    // Update costPrice and set review flag using updateOne
-    await Product.updateOne(
-      { _id: productId },
-      { 
-        $set: {
-          costPrice: costPrice,
-          priceNeedsReview: true,
-          lastCostPriceUpdate: new Date()
-        }
-      }
-    );
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        costPrice,
+        priceNeedsReview: true,
+        lastCostPriceUpdate: new Date(),
+      },
+    });
     
     revalidatePath('/crafter');
     revalidatePath('/admin/products');
     
-    return {
-      success: true,
-      message: 'Cost price updated successfully'
-    };
+    return { success: true, message: 'Cost price updated successfully' };
   } catch (error) {
     console.error('Error updating product cost price:', error);
-    return {
-      success: false,
-      message: 'Failed to update cost price'
-    };
+    return { success: false, message: 'Failed to update cost price' };
   }
 }
 
@@ -857,59 +735,46 @@ export async function updateProductCostPrice(
  */
 export async function markPriceAsReviewed(productId: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Check admin authorization
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, message: authCheck.error || 'Unauthorized' };
     }
 
-    await connectDB();
-    
-    const product = await Product.findById(productId);
+    const product = await prisma.product.findUnique({ where: { id: productId } });
     
     if (!product) {
-      return {
-        success: false,
-        message: 'Product not found'
-      };
+      return { success: false, message: 'Product not found' };
     }
     
-    // Clear the review flag
-    product.priceNeedsReview = false;
-    await product.save();
+    await prisma.product.update({
+      where: { id: productId },
+      data: { priceNeedsReview: false },
+    });
     
     revalidatePath('/admin/products');
     
-    return {
-      success: true,
-      message: 'Price marked as reviewed'
-    };
+    return { success: true, message: 'Price marked as reviewed' };
   } catch (error) {
     console.error('Error marking price as reviewed:', error);
-    return {
-      success: false,
-      message: 'Failed to mark price as reviewed'
-    };
+    return { success: false, message: 'Failed to mark price as reviewed' };
   }
 }
 
 /**
  * Get all products for a specific crafter by crafterId
- * @param crafterId - The crafter's ID
  */
 export async function getProductsByCrafterId(crafterId: string): Promise<{
   success: boolean;
   message: string;
-  data: Product[] | null;
+  data: any[] | null;
 }> {
   try {
-    await connectDB();
-    const products = await Product.find({ crafter: crafterId })
-      .populate('category', 'name')
-      .populate('crafter', 'name')
-      .sort({ createdAt: -1 });
+    const products = await prisma.product.findMany({
+      where: { crafterId },
+      include: { crafter: { select: { id: true, businessName: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
     
-    // Serialize products for client components
     const serializedProducts = products.map(serializeProduct);
     
     return {
@@ -939,78 +804,51 @@ export async function getAdminProducts({
   page?: number;
   crafterId?: string;
 }) {
-  await connectDB();
-
   const limit = PAGE_SIZE;
 
-  // Build the filter object for products
-  const productFilter: {
-    name?: { $regex: string; $options: string };
-    crafter?: string;
-  } = {};
+  const where: any = {};
   
-  // Query filter
   if (query && query !== 'all') {
-    productFilter.name = { $regex: query, $options: 'i' };
+    where.name = { contains: query, mode: 'insensitive' };
   }
 
-  // Crafter filter
   if (crafterId && crafterId !== 'all') {
-    productFilter.crafter = crafterId;
+    where.crafterId = crafterId;
   }
 
-  // Get products with pagination
   const [products, dataCount] = await Promise.all([
-    Product.find(productFilter)
-      .populate({
-        path: 'crafter',
-        select: 'name',
-        model: 'Crafter'
-      })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .exec(),
-    Product.countDocuments(productFilter)
+    prisma.product.findMany({
+      where,
+      include: { crafter: { select: { id: true, businessName: true } } },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.product.count({ where })
   ]);
 
-  // Serialize products
-  const serializedProducts = products
-    .filter(product => product && product._id) // Filter out any invalid products
-    .map((product) => {
-      const productObj = product.toObject();
-      const crafterObj = productObj.crafter as any;
-      const productId = productObj._id ? String(productObj._id) : String(product._id);
-      
-      if (!productId || productId === 'undefined') {
-        console.error('Product without valid ID:', product);
-        return null;
-      }
-      
-      return {
-        _id: productId,
-        id: productId,
-        name: product.name || '',
-        slug: product.slug || '',
-        description: product.description || '',
-        category: product.category || '',
-        price: product.price ? product.price.toString() : '0',
-        costPrice: product.costPrice || 0,
-        priceNeedsReview: product.priceNeedsReview || false,
-        lastCostPriceUpdate: product.lastCostPriceUpdate?.toString() || null,
-        availability: product.availability !== undefined ? product.availability : 0,
-        isActive: product.isActive !== undefined ? product.isActive : true,
-        isFirstPage: product.isFirstPage || false,
-        rating: product.rating?.toString() || '0',
-        createdAt: product.createdAt ? product.createdAt.toString() : '',
-        images: product.images || [],
-        crafter: crafterObj ? {
-          id: crafterObj._id?.toString() || crafterObj.id,
-          name: crafterObj.name
-        } : null,
-      };
-    })
-    .filter(Boolean); // Remove any null entries
+  const serializedProducts = products.map((product) => ({
+    _id: product.id,
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    category: product.category,
+    price: product.price.toString(),
+    costPrice: product.costPrice || 0,
+    priceNeedsReview: product.priceNeedsReview || false,
+    lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
+    availability: product.availability,
+    isActive: product.isActive,
+    isFirstPage: product.isFirstPage,
+    rating: product.rating?.toString() || '0',
+    createdAt: product.createdAt.toISOString(),
+    images: product.images || [],
+    crafter: product.crafter ? {
+      id: product.crafter.id,
+      name: product.crafter.businessName,
+    } : null,
+  }));
 
   return {
     data: serializedProducts,
@@ -1023,40 +861,31 @@ export async function getAdminProducts({
  */
 export async function toggleProductActive(productId: string): Promise<{ success: boolean; message: string; isActive?: boolean }> {
   try {
-    // Check admin authorization
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, message: authCheck.error || 'Unauthorized' };
     }
 
-    await connectDB();
-    
-    const product = await Product.findById(productId);
+    const product = await prisma.product.findUnique({ where: { id: productId } });
     
     if (!product) {
-      return {
-        success: false,
-        message: 'Product not found'
-      };
+      return { success: false, message: 'Product not found' };
     }
     
-    // Toggle the isActive status
-    product.isActive = !product.isActive;
-    await product.save();
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { isActive: !product.isActive },
+    });
     
     revalidatePath('/admin/products');
     
     return {
       success: true,
-      message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
-      isActive: product.isActive
+      message: `Product ${updated.isActive ? 'activated' : 'deactivated'} successfully`,
+      isActive: updated.isActive
     };
   } catch (error) {
     console.error('Error toggling product active status:', error);
-    return {
-      success: false,
-      message: 'Failed to toggle product status'
-    };
+    return { success: false, message: 'Failed to toggle product status' };
   }
 }
-

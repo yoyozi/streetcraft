@@ -1,9 +1,9 @@
 'use server'
 
-import { insertReviewSchema } from "../validators";
+import { insertReviewSchema } from "@/lib/validations/review";
 import { formatError } from "../utils";
 import { auth } from "@/auth";
-import { connectDB, Review, Product } from '../mongodb/models';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from "next/cache";
 import { ActionResponse } from "@/types";
 import { z } from "zod";
@@ -11,11 +11,11 @@ import { z } from "zod";
 // Get reviews for a product
 export async function getReviews({productId}: {productId: string}) {
     try {
-        await connectDB();
-        const data = await Review.find({ productId })
-            .populate('userId', 'name email')
-            .sort({ createdAt: 'desc' })
-            .exec();
+        const data = await prisma.review.findMany({
+            where: { productId },
+            include: { user: { select: { name: true, email: true } } },
+            orderBy: { createdAt: 'desc' },
+        });
         return { success: true, data };
     } catch (error) {
         return { success: false, message: formatError(error) || 'Failed to get review' }
@@ -33,8 +33,9 @@ export const getReviewByProductId = async ({
     const session = await auth();
     if (!session) throw new Error('User is not authenticated');
     
-    await connectDB();
-    return await Review.findOne({ productId, userId: session?.user.id });
+    return await prisma.review.findFirst({
+      where: { productId, userId: session.user.id! },
+    });
   };
 
 
@@ -47,7 +48,6 @@ export async function createUpdateReview(
       const session = await auth();
       if (!session) throw new Error('User is not authenticated');
   
-      await connectDB();
       // Validate and store review data and userId
       const review = insertReviewSchema.parse({
         ...data,
@@ -55,60 +55,53 @@ export async function createUpdateReview(
       });
   
       // Get the product being reviewed
-      const product = await Product.findById(review.productId);
+      const product = await prisma.product.findUnique({
+        where: { id: review.productId },
+      });
   
       if (!product) throw new Error('Product not found');
   
       // Check if user has already reviewed this product
-      const reviewExists = await Review.findOne({
-        productId: review.productId,
-        userId: review.userId,
+      const reviewExists = await prisma.review.findFirst({
+        where: { productId: review.productId, userId: review.userId },
       });
   
-      // Use MongoDB session for transaction-like behavior
-      const sessionMongo = await Review.startSession();
-      sessionMongo.startTransaction();
-  
-      try {
+      // Use Prisma transaction for atomic operations
+      await prisma.$transaction(async (tx) => {
         if (reviewExists) {
           // Update the review
-          await Review.findByIdAndUpdate(reviewExists.id, {
-            description: review.description,
-            title: review.title,
-            rating: review.rating,
-          }, { session: sessionMongo });
+          await tx.review.update({
+            where: { id: reviewExists.id },
+            data: {
+              description: review.description,
+              title: review.title,
+              rating: review.rating,
+            },
+          });
         } else {
           // Create a new review
-          await Review.create([review], { session: sessionMongo });
+          await tx.review.create({ data: review });
         }
   
         // Get the average rating
-        const avgResult = await Review.aggregate([
-          { $match: { productId: review.productId } },
-          { $group: { _id: null, avgRating: { $avg: '$rating' } } }
-        ], { session: sessionMongo });
+        const avgResult = await tx.review.aggregate({
+          where: { productId: review.productId },
+          _avg: { rating: true },
+          _count: { rating: true },
+        });
   
-        const averageRating = avgResult.length > 0 ? avgResult[0].avgRating : 0;
-  
-        // Get the number of reviews
-        const numReviews = await Review.countDocuments(
-          { productId: review.productId },
-          { session: sessionMongo }
-        );
+        const averageRating = avgResult._avg.rating || 0;
+        const numReviews = avgResult._count.rating || 0;
   
         // Update rating and number of reviews
-        await Product.findByIdAndUpdate(review.productId, {
-          rating: averageRating || 0,
-          numReviews: numReviews,
-        }, { session: sessionMongo });
-  
-        await sessionMongo.commitTransaction();
-      } catch (error) {
-        await sessionMongo.abortTransaction();
-        throw error;
-      } finally {
-        sessionMongo.endSession();
-      }
+        await tx.product.update({
+          where: { id: review.productId },
+          data: {
+            rating: averageRating,
+            numReviews: numReviews,
+          },
+        });
+      });
   
       revalidatePath(`/product/${product.slug}`);
   

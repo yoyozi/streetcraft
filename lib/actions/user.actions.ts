@@ -1,18 +1,16 @@
 'use server';
 
 import { 
-    ShippingAddressSchema, 
     signInFormSchema, 
     signUpFormSchema, 
-    PaymentMethodSchema, 
-    updateUserSchema } from "../validators";
+    updateUserSchema } from "@/lib/validations/user";
+import { ShippingAddressSchema, PaymentMethodSchema } from "@/lib/validations/order";
 
 import { auth, signIn, signOut } from "@/auth"; // root-level import
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { connectDB } from '../mongodb/models';
+import { prisma } from '@/lib/prisma';
 import { formatError } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
-import { User } from '../mongodb/models';
 import { hash } from 'bcrypt-ts-edge';
 import { ActionResponse, ShippingAddress } from "@/types";
 import { redirect } from "next/navigation";
@@ -26,29 +24,17 @@ export async function signInWithCredentials(
   formData: FormData
 ): Promise<ActionResponse> {
   try {
-    // Log all form data for debugging NBNBNBN dont leave uncommented!
-    console.log('signInWithCredentials - form data entries:');
-    for (const [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-
     const userData = signInFormSchema.parse({
       email: formData.get('email'),
       password: formData.get('password'),
     });
 
     const callbackUrl = (formData.get('callbackUrl') as string) || '/';
-
-    console.log("[USER ACTIONS] Sending creds to AUTH - signing in:", userData.email);
-    console.log("[USER ACTIONS] Callback URL:", callbackUrl);
   
     // Check if user requires password reset BEFORE signing in
-    await connectDB();
-    const user = await User.findOne({ email: userData.email });
+    const user = await prisma.user.findUnique({ where: { email: userData.email } });
     
     if (user && user.requirePasswordReset) {
-      console.log("[USER ACTIONS] 🔐 User requires password reset, will redirect to reset page");
-      // Sign in but redirect to reset password page
       await signIn('credentials', {
         email: userData.email,
         password: userData.password,
@@ -76,8 +62,6 @@ export async function signInWithCredentials(
       });
     }
     
-    // console.log("[USER ACTIONS] ❌ FALLBACK Next auth redirect to CBUrl failed trying redirectTo");
-    // This return is a fallback in case redirect doesn't work
     return { 
       success: true, 
       message: 'Sign in successfull',
@@ -95,15 +79,7 @@ export async function signInWithCredentials(
 // --- Sign user out ---
 export async function signOutUser() {
   try {
-    // console.log("[USER ACTIONS] Signing out user");
     await signOut({ redirect: false });
-    
-    // Optionally clear custom cookies if needed
-    // const cookieStore = cookies();
-    // cookieStore.delete('cart-session-id');
-    // cookieStore.delete('user-preferences');
-    
-    // console.log("[USER ACTIONS] Signed out successfully, redirecting to home");
     redirect('/');
   } catch (error) {
     if (isRedirectError(error)) {
@@ -126,18 +102,16 @@ export async function signUpUser(prevState: ActionResponse | null, formData: For
       confirmPassword: formData.get('confirmPassword'),
     });
 
-    const plainPass = user.password; 
-
-    const hashedPassword = await hashSync(plainPass, 10);
+    const hashedPassword = await hash(user.password, 10);
     const callbackUrl = formData.get('callbackUrl') as string || '/';
-    console.log('[SIGN UP USER -SIGNING IN] signUpWithCredentials - Using callbackUrl:', callbackUrl);
 
     // Create the user
-    await connectDB();
-    await User.create({
-      name: user.name,
-      email: user.email,
-      password: hashedPassword,
+    await prisma.user.create({
+      data: {
+        name: user.name,
+        email: user.email,
+        password: hashedPassword,
+      },
     });
 
     await signIn('credentials', {
@@ -146,9 +120,7 @@ export async function signUpUser(prevState: ActionResponse | null, formData: For
       redirect: true,
       redirectTo: callbackUrl,
     });
-    
 
-    // Redirect if above fails
     return { 
       success: true, 
       message: 'User registered successfully',
@@ -158,7 +130,6 @@ export async function signUpUser(prevState: ActionResponse | null, formData: For
     if (isRedirectError(error)) {
       throw error;
     }
-    // Get the error message from formatError and ensure it's a string
     const errorResponse = formatError(error);
     const errorMessage = typeof errorResponse === 'object' && errorResponse !== null && 'message' in errorResponse
       ? String(errorResponse.message)
@@ -172,8 +143,7 @@ export async function signUpUser(prevState: ActionResponse | null, formData: For
 // In the shipping-address page we need to get the user by ID
 export async function getUserById(userId: string) {
   try {
-    await connectDB();
-    const user = await User.findById(userId);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     return user;
   } catch (error) {
     console.error("[USER ACTIONS] Get user by ID exception:", error);
@@ -185,17 +155,17 @@ export async function getUserById(userId: string) {
 export async function updateUserAddress(data: ShippingAddress) {
   try {
     const session = await auth();
-    await connectDB();
 
-    const currentUser = await User.findById(session?.user?.id);
-
-    if (!currentUser) {
+    if (!session?.user?.id) {
       return { success: false, message: "User not found" };
     }
 
     const address = ShippingAddressSchema.parse(data);
 
-    await User.findByIdAndUpdate(currentUser.id, { address });
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { address: address as any },
+    });
 
     return { success: true, message: "Address updated successfully" };
 
@@ -210,21 +180,21 @@ export async function updateUserPaymentMethod(
 ): Promise<ActionResponse> { 
   try {
     const session = await auth();
-    await connectDB();
-    const currentUser = await User.findById(session?.user?.id);
 
-    if (!currentUser) {
+    if (!session?.user?.id) {
       return { success: false, message: "User not found" };
     }
 
     const paymentMethod = PaymentMethodSchema.parse(data);
 
-    await User.findByIdAndUpdate(currentUser.id, { paymentMethod: paymentMethod.type });
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { paymentMethod: paymentMethod.type },
+    });
 
     return { success: true, message: "Payment method updated successfully" };
     
   } catch (error) {
-    // formatError already returns an ActionResponse with a string message
     return formatError(error);
   }
 
@@ -234,19 +204,19 @@ export async function updateUserPaymentMethod(
 export async function updateProfile( user: { name:string; email:string; }) {
   try {
     const session = await auth();
-    await connectDB();
-    const currentUser = await User.findById(session?.user?.id);
 
-    if (!currentUser) {
+    if (!session?.user?.id) {
       return { success: false, message: "User not found" };
     }
 
-    await User.findByIdAndUpdate(currentUser.id, { name: user.name });
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { name: user.name },
+    });
 
     return { success: true, message: "Profile updated successfully" };
     
   } catch (error) {
-    // formatError already returns an ActionResponse with a string message
     return formatError(error);
   }
 }
@@ -257,50 +227,45 @@ export async function updateProfile( user: { name:string; email:string; }) {
 // @param page - The current page number (1-based index)
 // @returns Object containing user data and pagination info
 export async function getAllUsers({
-  limit = PAGE_SIZE,  // Default to PAGE_SIZE if limit is not provided
-  page,               // Current page number (required)
-  query = '',         // Search query string
+  limit = PAGE_SIZE,
+  page,
+  query = '',
 }: {
-  limit?: number;     // Typing limit to be optional and a number
-  page: number;       // Required parameter for current page, is a number
-  query?: string;     // Optional search query
+  limit?: number;
+  page: number;
+  query?: string;
 }) {
-  await connectDB();
-  
-  // Build the search filter
-  const searchFilter = query
+  // Build Prisma where filter
+  const where = query
     ? {
-        $or: [
-          { name: { $regex: query, $options: 'i' } },
-          { email: { $regex: query, $options: 'i' } },
+        OR: [
+          { name: { contains: query, mode: 'insensitive' as const } },
+          { email: { contains: query, mode: 'insensitive' as const } },
         ],
       }
     : {};
 
-  // Fetch paginated and filtered user data from the database using MongoDB
   const [data, dataCount] = await Promise.all([
-    User.find(searchFilter)
-      .sort({ createdAt: -1 })  // Sort users by creation date, newest first
-      .limit(limit)            // Limit the number of results per page
-      .skip((page - 1) * limit) // Calculate how many records to skip for pagination
-      .lean()                  // Return plain JavaScript objects
-      .exec(),
-    User.countDocuments(searchFilter),  // Get the count of filtered users
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: (page - 1) * limit,
+    }),
+    prisma.user.count({ where }),
   ]);
 
-  // Serialize the data to remove MongoDB artifacts
   const serializedData = data.map(user => ({
     ...user,
-    _id: user._id.toString(),
-    id: user._id.toString(),
-    createdAt: user.createdAt?.toString(),
-    updatedAt: user.updatedAt?.toString(),
+    _id: user.id,
+    id: user.id,
+    createdAt: user.createdAt?.toISOString(),
+    updatedAt: user.updatedAt?.toISOString(),
   }));
 
-  // Return the paginated data along with total pages info
   return {
-    data: JSON.parse(JSON.stringify(serializedData)),  // The array of user data for the current page
-    totalPages: Math.ceil(dataCount / limit),  // ceil to round up to the nearest integer
+    data: serializedData,
+    totalPages: Math.ceil(dataCount / limit),
   };
 }
 
@@ -308,8 +273,7 @@ export async function getAllUsers({
 // Delete user by ID
 export async function deleteUser(id: string): Promise<{ success: boolean; message: string }> { 
   try {
-    await connectDB();
-    await User.findByIdAndDelete(id);
+    await prisma.user.delete({ where: { id } });
     revalidatePath('/admin/users');
     return {
       success: true,
@@ -334,30 +298,27 @@ export async function createUser(userData: {
   requirePasswordReset?: boolean;
 }): Promise<{ success: boolean; message: string }> {
   try {
-    // Check admin authorization
     const session = await auth();
     if (!session || session.user?.role !== 'admin') {
       return { success: false, message: 'Unauthorized: Admin access required' };
     }
 
-    await connectDB();
-
     // Check if user already exists
-    const existingUser = await User.findOne({ email: userData.email });
+    const existingUser = await prisma.user.findUnique({ where: { email: userData.email } });
     if (existingUser) {
       return { success: false, message: 'User with this email already exists' };
     }
 
-    // Hash the password
     const hashedPassword = await hash(userData.password, 10);
 
-    // Create user with hashed password
-    await User.create({
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      password: hashedPassword,
-      requirePasswordReset: userData.requirePasswordReset || false,
+    await prisma.user.create({
+      data: {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        password: hashedPassword,
+        requirePasswordReset: userData.requirePasswordReset || false,
+      },
     });
 
     revalidatePath('/admin/users');
@@ -379,11 +340,6 @@ export async function createUser(userData: {
 // Update a user by admin
 export async function updateUser(user: z.infer<typeof updateUserSchema>): Promise<{ success: boolean; message: string }> {
   try {
-    await connectDB();
-
-    // Debug: Log the incoming user data
-    console.log('Update user data:', user);
-
     // Prepare update data (exclude id from update)
     const updateData: {
       name: string;
@@ -398,35 +354,23 @@ export async function updateUser(user: z.infer<typeof updateUserSchema>): Promis
       role: user.role,
     };
 
-    // Only include isActive if it's explicitly provided
     if (user.isActive !== undefined) {
       updateData.isActive = user.isActive;
     }
 
-    // Add password reset flag if provided
     if (user.requirePasswordReset !== undefined) {
       updateData.requirePasswordReset = user.requirePasswordReset;
     }
 
-    // Add new password if provided
     if (user.password && user.password.trim() && user.password.length > 0) {
-      console.log('Hashing new password...');
       const hashedPassword = await hash(user.password, 10);
       updateData.password = hashedPassword;
-      console.log('Password hashed and added to update data');
-    } else {
-      console.log('No password provided or empty password, skipping password update');
     }
 
-    // Debug: Log the update data
-    console.log('MongoDB update data:', updateData);
-
-    try {
-      await User.findByIdAndUpdate(user.id, updateData);
-    } catch (mongoError) {
-      console.error('MongoDB update error:', mongoError);
-      throw mongoError;
-    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: updateData,
+    });
 
     revalidatePath('/admin/users');
     
@@ -447,16 +391,13 @@ export async function updateUser(user: z.infer<typeof updateUserSchema>): Promis
 // Link a user to a crafter
 export async function linkUserToCrafter(userId: string, crafterId: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Check admin authorization
     const session = await auth();
     if (!session || session.user?.role !== 'admin') {
       return { success: false, message: 'Unauthorized: Admin access required' };
     }
 
-    await connectDB();
-
     // Check if user exists and has craft role
-    const user = await User.findById(userId);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       return { success: false, message: 'User not found' };
     }
@@ -466,19 +407,21 @@ export async function linkUserToCrafter(userId: string, crafterId: string): Prom
     }
 
     // Check if crafter exists
-    const Crafter = (await import('../mongodb/models')).Crafter;
-    const crafter = await Crafter.findById(crafterId);
+    const crafter = await prisma.crafter.findUnique({ where: { id: crafterId } });
     if (!crafter) {
       return { success: false, message: 'Crafter not found' };
     }
 
     // Check if user is already linked to another crafter
-    if (user.crafterId && user.crafterId.toString() !== crafterId) {
+    if (user.crafterId && user.crafterId !== crafterId) {
       return { success: false, message: 'User is already linked to another crafter' };
     }
 
     // Link user to crafter
-    await User.findByIdAndUpdate(userId, { crafterId });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { crafterId },
+    });
 
     revalidatePath('/admin/crafters');
     

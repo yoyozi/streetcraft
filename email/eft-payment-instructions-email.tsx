@@ -1,221 +1,153 @@
 import { Order } from "@/types";
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Img,
-  Preview,
-  Row,
-  Section,
-  Tailwind,
-  Text,
-} from '@react-email/components';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { EFT_BANK_NAME, EFT_ACCOUNT_NUMBER, EFT_BRANCH_CODE, EFT_ACCOUNT_HOLDER } from '@/lib/constants';
-require('dotenv').config();
 
 type EftPaymentInstructionsProps = {
   order: Order;
 };
 
 export default function EftPaymentInstructionsEmail({ order }: EftPaymentInstructionsProps) {
+  const ref = order.id.substring(0, 8).toUpperCase();
+
   return (
-    <Html>
-      <Preview>EFT Payment Instructions for Order {order.id}</Preview>
-      <Tailwind>
-        <Head />
-        <Body className='font-sans bg-white'>
-          <Container className='max-w-xl'>
-            <Heading>EFT Payment Instructions</Heading>
-            
-            <Text className='text-base'>
-              Dear {order.user.name},
-            </Text>
-            
-            <Text className='text-base'>
-              Thank you for your order! Please complete your payment using the banking details below.
-            </Text>
+    <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#fff', padding: '20px' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: '24px', marginBottom: '16px' }}>EFT Payment Instructions</h1>
 
-            {/* Order Summary */}
-            <Section className='border border-solid border-gray-300 rounded-lg p-4 my-4 bg-gray-50'>
-              <Heading as='h2' className='text-lg mt-0'>Order Summary</Heading>
-              <Row>
-                <Column>
-                  <Text className='mb-0 text-gray-500'>Order ID</Text>
-                  <Text className='mt-0 font-semibold'>{order.id}</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 text-gray-500'>Order Date</Text>
-                  <Text className='mt-0 font-semibold'>
-                    {formatDateTime(order.createdAt).dateTime}
-                  </Text>
-                </Column>
-              </Row>
-              <Row className='mt-4'>
-                <Column>
-                  <Text className='mb-0 text-gray-500'>Amount to Pay</Text>
-                  <Text className='mt-0 text-2xl font-bold text-green-700'>
+        <p>Dear {order.user.name},</p>
+        <p>Thank you for your order! Please complete your payment using the banking details below.</p>
+
+        {/* Order Summary */}
+        <div style={{ border: '1px solid #d1d5db', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#f9fafb' }}>
+          <h2 style={{ fontSize: '18px', marginTop: 0 }}>Order Summary</h2>
+          <table style={{ width: '100%' }}>
+            <tbody>
+              <tr>
+                <td>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Order ID</p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{order.id}</p>
+                </td>
+                <td>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Order Date</p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{formatDateTime(order.createdAt).dateTime}</p>
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} style={{ paddingTop: '12px' }}>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>Amount to Pay</p>
+                  <p style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#15803d' }}>
                     {formatCurrency(order.totalPrice)}
-                  </Text>
-                </Column>
-              </Row>
-            </Section>
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-            {/* Banking Details */}
-            <Section className='border border-solid border-blue-500 rounded-lg p-4 my-4 bg-blue-50'>
-              <Heading as='h2' className='text-lg mt-0 text-blue-900'>Banking Details</Heading>
-              
-              <Row className='mb-2'>
-                <Column width='40%'>
-                  <Text className='mb-0 text-gray-700 font-semibold'>Bank Name:</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 font-bold'>{EFT_BANK_NAME}</Text>
-                </Column>
-              </Row>
+        {/* Banking Details */}
+        <div style={{ border: '1px solid #3b82f6', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#eff6ff' }}>
+          <h2 style={{ fontSize: '18px', marginTop: 0, color: '#1e3a5f' }}>Banking Details</h2>
+          <table style={{ width: '100%' }}>
+            <tbody>
+              {[
+                { label: 'Bank Name', value: EFT_BANK_NAME },
+                { label: 'Account Holder', value: EFT_ACCOUNT_HOLDER },
+                { label: 'Account Number', value: EFT_ACCOUNT_NUMBER },
+                { label: 'Branch Code', value: EFT_BRANCH_CODE },
+              ].map(({ label, value }) => (
+                <tr key={label}>
+                  <td style={{ width: '40%', padding: '4px 0', fontWeight: 600, color: '#374151' }}>{label}:</td>
+                  <td style={{ padding: '4px 0', fontWeight: 700 }}>{value}</td>
+                </tr>
+              ))}
+              <tr>
+                <td style={{ width: '40%', padding: '4px 0', fontWeight: 600, color: '#374151' }}>Reference:</td>
+                <td style={{ padding: '4px 0', fontWeight: 700, color: '#dc2626' }}>{ref}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-              <Row className='mb-2'>
-                <Column width='40%'>
-                  <Text className='mb-0 text-gray-700 font-semibold'>Account Holder:</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 font-bold'>{EFT_ACCOUNT_HOLDER}</Text>
-                </Column>
-              </Row>
+        {/* Important Instructions */}
+        <div style={{ border: '1px solid #fb923c', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fff7ed' }}>
+          <h3 style={{ fontSize: '16px', marginTop: 0, color: '#7c2d12' }}>Important Instructions</h3>
+          <p style={{ fontSize: '14px', margin: '8px 0' }}>
+            <strong>Please use your Order ID as the payment reference:</strong> {ref}
+          </p>
+          <p style={{ fontSize: '14px', margin: '8px 0' }}>Payment must be made within 48 hours to secure your order</p>
+          <p style={{ fontSize: '14px', margin: '8px 0' }}>Once payment is received, we will process your order immediately</p>
+          <p style={{ fontSize: '14px', margin: '8px 0' }}>You will receive a confirmation email once payment is verified</p>
+        </div>
 
-              <Row className='mb-2'>
-                <Column width='40%'>
-                  <Text className='mb-0 text-gray-700 font-semibold'>Account Number:</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 font-bold text-lg'>{EFT_ACCOUNT_NUMBER}</Text>
-                </Column>
-              </Row>
-
-              <Row className='mb-2'>
-                <Column width='40%'>
-                  <Text className='mb-0 text-gray-700 font-semibold'>Branch Code:</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 font-bold'>{EFT_BRANCH_CODE}</Text>
-                </Column>
-              </Row>
-
-              <Row>
-                <Column width='40%'>
-                  <Text className='mb-0 text-gray-700 font-semibold'>Reference:</Text>
-                </Column>
-                <Column>
-                  <Text className='mb-0 font-bold text-red-600'>
-                    {order.id.substring(0, 8).toUpperCase()}
-                  </Text>
-                </Column>
-              </Row>
-            </Section>
-
-            {/* Important Instructions */}
-            <Section className='border border-solid border-orange-400 rounded-lg p-4 my-4 bg-orange-50'>
-              <Heading as='h3' className='text-base mt-0 text-orange-900'>Important Instructions</Heading>
-              <Text className='text-sm my-2'>
-                ⚠️ <strong>Please use your Order ID as the payment reference:</strong> {order.id.substring(0, 8).toUpperCase()}
-              </Text>
-              <Text className='text-sm my-2'>
-                • Payment must be made within 48 hours to secure your order
-              </Text>
-              <Text className='text-sm my-2'>
-                • Once payment is received, we will process your order immediately
-              </Text>
-              <Text className='text-sm my-2'>
-                • You will receive a confirmation email once payment is verified
-              </Text>
-            </Section>
-
-            {/* Order Items */}
-            <Section className='border border-solid border-gray-300 rounded-lg p-4 my-4'>
-              <Heading as='h2' className='text-lg mt-0'>Order Items</Heading>
-              {order.orderItems.map((item) => (
-                <Row key={item.productId} className='mt-4 pb-4 border-b border-gray-200'>
-                  <Column className='w-20'>
-                    <Img
-                      width='60'
+        {/* Order Items */}
+        <div style={{ border: '1px solid #d1d5db', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', marginTop: 0 }}>Order Items</h2>
+          {order.orderItems.map((item) => (
+            <table key={item.productId} style={{ width: '100%', marginBottom: '12px', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '60px', verticalAlign: 'top' }}>
+                    <img
+                      width="60"
                       alt={item.name}
-                      className='rounded'
+                      style={{ borderRadius: '4px' }}
                       src={
                         item.image.startsWith('/')
                           ? `${process.env.NEXT_PUBLIC_SERVER_URL}${item.image}`
                           : item.image
                       }
                     />
-                  </Column>
-                  <Column className='align-top'>
-                    <Text className='mx-2 my-0 font-semibold'>{item.name}</Text>
-                    <Text className='mx-2 my-0 text-sm text-gray-600'>Qty: {item.qty}</Text>
-                  </Column>
-                  <Column align='right' className='align-top'>
-                    <Text className='m-0 font-semibold'>{formatCurrency(item.price)}</Text>
-                  </Column>
-                </Row>
+                  </td>
+                  <td style={{ verticalAlign: 'top', padding: '0 8px' }}>
+                    <p style={{ margin: 0, fontWeight: 600 }}>{item.name}</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>Qty: {item.qty}</p>
+                  </td>
+                  <td style={{ verticalAlign: 'top', textAlign: 'right', fontWeight: 600 }}>
+                    {formatCurrency(item.price)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ))}
+
+          <table style={{ width: '100%', borderTop: '1px solid #9ca3af', paddingTop: '8px' }}>
+            <tbody>
+              {[
+                { name: 'Items', price: order.itemsPrice },
+                { name: 'Tax', price: order.taxPrice },
+                { name: 'Shipping', price: order.shippingPrice },
+              ].map(({ name, price }) => (
+                <tr key={name}>
+                  <td style={{ textAlign: 'right', padding: '2px 8px', color: '#6b7280' }}>{name}:</td>
+                  <td style={{ textAlign: 'right', width: '100px', padding: '2px 0' }}>{formatCurrency(price)}</td>
+                </tr>
               ))}
+              <tr style={{ borderTop: '1px solid #9ca3af' }}>
+                <td style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 700, fontSize: '18px' }}>Total:</td>
+                <td style={{ textAlign: 'right', width: '100px', padding: '4px 0', fontWeight: 700, fontSize: '18px' }}>
+                  {formatCurrency(order.totalPrice)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-              {/* Price Breakdown */}
-              <Row className='mt-4 pt-2'>
-                <Column align='right' className='text-gray-600'>
-                  <Text className='my-1'>Items:</Text>
-                </Column>
-                <Column align='right' width={100}>
-                  <Text className='my-1'>{formatCurrency(order.itemsPrice)}</Text>
-                </Column>
-              </Row>
-              <Row>
-                <Column align='right' className='text-gray-600'>
-                  <Text className='my-1'>Tax:</Text>
-                </Column>
-                <Column align='right' width={100}>
-                  <Text className='my-1'>{formatCurrency(order.taxPrice)}</Text>
-                </Column>
-              </Row>
-              <Row>
-                <Column align='right' className='text-gray-600'>
-                  <Text className='my-1'>Shipping:</Text>
-                </Column>
-                <Column align='right' width={100}>
-                  <Text className='my-1'>{formatCurrency(order.shippingPrice)}</Text>
-                </Column>
-              </Row>
-              <Row className='border-t border-gray-400 pt-2'>
-                <Column align='right'>
-                  <Text className='my-1 font-bold text-lg'>Total:</Text>
-                </Column>
-                <Column align='right' width={100}>
-                  <Text className='my-1 font-bold text-lg'>{formatCurrency(order.totalPrice)}</Text>
-                </Column>
-              </Row>
-            </Section>
+        {/* Shipping Address */}
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px' }}>Shipping Address</h3>
+          <p style={{ fontSize: '14px', margin: '4px 0' }}>{order.shippingAddress.fullName}</p>
+          <p style={{ fontSize: '14px', margin: '4px 0' }}>{order.shippingAddress.streetAddress}</p>
+          <p style={{ fontSize: '14px', margin: '4px 0' }}>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
+          <p style={{ fontSize: '14px', margin: '4px 0' }}>{order.shippingAddress.country}</p>
+        </div>
 
-            {/* Shipping Address */}
-            <Section className='my-4'>
-              <Heading as='h3' className='text-base'>Shipping Address</Heading>
-              <Text className='text-sm my-1'>{order.shippingAddress.fullName}</Text>
-              <Text className='text-sm my-1'>{order.shippingAddress.streetAddress}</Text>
-              <Text className='text-sm my-1'>
-                {order.shippingAddress.city}, {order.shippingAddress.postalCode}
-              </Text>
-              <Text className='text-sm my-1'>{order.shippingAddress.country}</Text>
-            </Section>
-
-            <Text className='text-sm text-gray-600 mt-6'>
-              If you have any questions about your order or payment, please contact our support team.
-            </Text>
-
-            <Text className='text-sm text-gray-600'>
-              Thank you for shopping with us!
-            </Text>
-          </Container>
-        </Body>
-      </Tailwind>
-    </Html>
+        <p style={{ fontSize: '14px', color: '#6b7280' }}>
+          If you have any questions about your order or payment, please contact our support team.
+        </p>
+        <p style={{ fontSize: '14px', color: '#6b7280' }}>
+          Thank you for shopping with us!
+        </p>
+      </div>
+    </div>
   );
 }

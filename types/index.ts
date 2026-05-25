@@ -1,14 +1,10 @@
 // Determining types and getting Zod to give us runtime typing
-// look at the validators file in the lib/validators for validations that we import here
+// Imports from split validation schemas (Prisma migration)
 import { z } from 'zod';
-import { insertProductSchema, 
-    insertCartSchema, 
-    cartItemSchema, 
-    ShippingAddressSchema, 
-    insertOrderItemSchema, 
-    insertOrderSchema, 
-    paymentResultSchema,
-    insertReviewSchema} from '@/lib/validators';
+import { insertProductSchema } from '@/lib/validations/product';
+import { insertCartSchema, cartItemSchema } from '@/lib/validations/cart';
+import { ShippingAddressSchema, insertOrderItemSchema, insertOrderSchema, paymentResultSchema } from '@/lib/validations/order';
+import { insertReviewSchema } from '@/lib/validations/review';
 
 
 export type DbProduct = {

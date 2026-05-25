@@ -1,7 +1,7 @@
-// middleware.ts
+// proxy.ts (renamed from middleware.ts for Next.js 16)
 import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const res = NextResponse.next();
 
   // Handle sessionCartId for cart functionality
@@ -10,24 +10,16 @@ export function middleware(req: NextRequest) {
   if (isDocument) {
     if (!req.cookies.get("sessionCartId")) {
       const uuid = crypto.randomUUID();
-      // console.log("[MIDDLEWARE] 🍪 Issuing new sessionCartId:", uuid, "for", req.nextUrl.pathname);
       res.cookies.set("sessionCartId", uuid, {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
       });
-    } else {
-      // const existing = req.cookies.get("sessionCartId")?.value;
-      // console.log("[MIDDLEWARE] ✅ sessionCartId already present:", existing, "for", req.nextUrl.pathname);
     }
-  } else {
-    // Skip issuing cookies for asset requests (images, css, js, etc.)
-    // Uncomment to debug noisy assets:
-    // console.log("[MIDDLEWARE] ⏭️ Non-document request (", secFetchDest, ") for", req.nextUrl.pathname);
   }
 
   // Auth protection: allow anonymous access to product and cart pages
-  // Only protect clearly account-related areas (adjust as needed)
+  // Only protect clearly account-related areas
   const isAuthPage = req.nextUrl.pathname.startsWith('/sign-in') ||
                      req.nextUrl.pathname.startsWith('/sign-up');
   const isAccountArea = req.nextUrl.pathname.startsWith('/account') ||
@@ -56,7 +48,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Restrict middleware to app routes where we need auth/cart behavior
   matcher: [
     "/",
     "/product/:path*",

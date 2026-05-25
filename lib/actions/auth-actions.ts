@@ -18,3 +18,12 @@ export async function verifyCrafter() {
     }
     return session;
 }
+
+// Helper to check admin authorization - returns result object instead of redirecting
+export async function checkAdminAuth() {
+  const session = await auth();
+  if (!session || session.user?.role !== 'admin') {
+    return { authorized: false as const, error: 'Unauthorized: Admin access required' };
+  }
+  return { authorized: true as const };
+}

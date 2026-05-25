@@ -77,12 +77,13 @@ export async function getLinkedCrafterId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
   
-  // Import here to avoid circular dependencies
-  const { connectDB, User } = await import('@/lib/mongodb/models');
+  const { prisma } = await import('@/lib/prisma');
   
-  await connectDB();
-  const user = await User.findById(session.user.id).select('crafterId');
-  return user?.crafterId?.toString() || null;
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { crafterId: true },
+  });
+  return user?.crafterId || null;
 }
 
 /**

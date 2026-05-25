@@ -1,18 +1,9 @@
 'use server';
 
-import { connectDB, Category } from '../mongodb/models';
-import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { categorySchema } from '../validators';
-
-// Helper to check admin authorization
-async function checkAdminAuth() {
-  const session = await auth();
-  if (!session || session.user?.role !== 'admin') {
-    return { authorized: false, error: 'Unauthorized: Admin access required' };
-  }
-  return { authorized: true };
-}
+import { categorySchema, updateCategorySchema } from '@/lib/validations/category';
+import { checkAdminAuth } from './auth-actions';
 
 export async function createCategory(data: { name: string; description: string }) {
   try {
@@ -29,21 +20,19 @@ export async function createCategory(data: { name: string; description: string }
       };
     }
 
-    await connectDB();
-
-    const category = await Category.create({
-      ...validation.data,
-      isActive: true,
+    const category = await prisma.category.create({
+      data: {
+        ...validation.data,
+        isActive: true,
+      },
     });
 
     revalidatePath('/admin/categories');
 
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(category)),
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to create category' };
+    return { success: true, data: category };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create category';
+    return { success: false, error: message };
   }
 }
 
@@ -54,26 +43,22 @@ export async function updateCategory(id: string, data: { name?: string; descript
       return { success: false, error: authCheck.error };
     }
 
-    await connectDB();
-
-    const category = await Category.findByIdAndUpdate(
-      id,
-      data,
-      { new: true, runValidators: true }
-    );
-
-    if (!category) {
-      return { success: false, error: 'Category not found' };
+    const validation = updateCategorySchema.safeParse(data);
+    if (!validation.success) {
+      return { success: false, error: validation.error.errors[0]?.message || 'Validation failed' };
     }
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: validation.data,
+    });
 
     revalidatePath('/admin/categories');
 
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(category)),
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update category' };
+    return { success: true, data: category };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update category';
+    return { success: false, error: message };
   }
 }
 
@@ -84,57 +69,45 @@ export async function deleteCategory(id: string) {
       return { success: false, error: authCheck.error };
     }
 
-    await connectDB();
-
-    const category = await Category.findByIdAndDelete(id);
-
-    if (!category) {
-      return { success: false, error: 'Category not found' };
-    }
+    await prisma.category.delete({ where: { id } });
 
     revalidatePath('/admin/categories');
 
-    return {
-      success: true,
-      message: 'Category deleted successfully',
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete category' };
+    return { success: true, message: 'Category deleted successfully' };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete category';
+    return { success: false, error: message };
   }
 }
 
 export async function getAllCategories(options?: { isActive?: boolean }) {
   try {
-    await connectDB();
+    const where = options?.isActive !== undefined ? { isActive: options.isActive } : {};
 
-    const filter = options?.isActive !== undefined ? { isActive: options.isActive } : {};
-    const categories = await Category.find(filter).sort({ createdAt: -1 });
+    const categories = await prisma.category.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
 
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(categories)),
-    };
-  } catch (error: any) {
-    return { success: false, data: [], error: error.message || 'Failed to fetch categories' };
+    return { success: true, data: categories };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch categories';
+    return { success: false, data: [], error: message };
   }
 }
 
 export async function getCategoryById(id: string) {
   try {
-    await connectDB();
-
-    const category = await Category.findById(id);
+    const category = await prisma.category.findUnique({ where: { id } });
 
     if (!category) {
       return { success: false, error: 'Category not found' };
     }
 
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(category)),
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to fetch category' };
+    return { success: true, data: category };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch category';
+    return { success: false, error: message };
   }
 }
 
@@ -145,24 +118,22 @@ export async function toggleCategoryStatus(id: string) {
       return { success: false, error: authCheck.error };
     }
 
-    await connectDB();
-
-    const category = await Category.findById(id);
+    const category = await prisma.category.findUnique({ where: { id } });
 
     if (!category) {
       return { success: false, error: 'Category not found' };
     }
 
-    category.isActive = !category.isActive;
-    await category.save();
+    const updated = await prisma.category.update({
+      where: { id },
+      data: { isActive: !category.isActive },
+    });
 
     revalidatePath('/admin/categories');
 
-    return {
-      success: true,
-      data: JSON.parse(JSON.stringify(category)),
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to toggle category status' };
+    return { success: true, data: updated };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to toggle category status';
+    return { success: false, error: message };
   }
 }
