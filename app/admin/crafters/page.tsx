@@ -28,9 +28,17 @@ const AdminCraftersPage = async () => {
         <div className="flex items-center gap-3">
           <h1 className="h2-bold">Crafters</h1>
         </div>
-        <Button asChild variant='default'>
-          <Link href='/admin/crafters/create'>Create Crafter</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant='secondary'>
+            <Link href='/admin/crafters/review'>Review Applications</Link>
+          </Button>
+          <Button asChild variant='outline'>
+            <Link href='/admin/crafters/invite'>Invite Crafter</Link>
+          </Button>
+          <Button asChild variant='default'>
+            <Link href='/admin/crafters/create'>Create Crafter</Link>
+          </Button>
+        </div>
       </div>
       <div>
         <Table>

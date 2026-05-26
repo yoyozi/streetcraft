@@ -159,6 +159,93 @@ export async function getCrafterById(id: string) {
   }
 }
 
+// GET PENDING CRAFTERS FOR REVIEW (Admin only)
+export async function getPendingCrafters() {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error, data: [] };
+    }
+
+    const crafters = await prisma.crafter.findMany({
+      where: { status: 'PENDING' },
+      include: { user: { select: { name: true, phoneNumber: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { success: true, data: crafters };
+  } catch {
+    return { success: false, error: 'Failed to fetch pending crafters', data: [] };
+  }
+}
+
+// APPROVE CRAFTER (Admin only)
+export async function approveCrafter(id: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const crafter = await prisma.crafter.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        isActive: true,
+        approvedAt: new Date(),
+      },
+    });
+
+    // Update user role to 'craft'
+    await prisma.user.update({
+      where: { id: crafter.userId },
+      data: { role: 'craft' },
+    });
+
+    // Send approval SMS
+    const { sendSms } = await import('@/lib/clickatell');
+    await sendSms(
+      crafter.mobile,
+      `Great news! Your StreetCraft application has been approved. We'll be in touch to arrange a meetup. Welcome aboard!`
+    );
+
+    revalidatePath('/admin/crafters');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to approve crafter' };
+  }
+}
+
+// REJECT CRAFTER (Admin only)
+export async function rejectCrafter(id: string, reason: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const crafter = await prisma.crafter.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        rejectedReason: reason,
+      },
+    });
+
+    // Send rejection SMS
+    const { sendSms } = await import('@/lib/clickatell');
+    await sendSms(
+      crafter.mobile,
+      `Hi, unfortunately your StreetCraft application was not successful at this time. Thank you for your interest.`
+    );
+
+    revalidatePath('/admin/crafters');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to reject crafter' };
+  }
+}
+
 // DELETE CRAFTER (Admin only)
 export async function deleteCrafter(id: string) {
   try {

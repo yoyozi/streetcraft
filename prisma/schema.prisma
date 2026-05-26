@@ -119,6 +119,7 @@ model Crafter {
   city             String?
   province         String?
   profileImage     String?
+  workSamples      String[]      @default([])
 
   status           CrafterStatus @default(PENDING)
   identityVerified Boolean       @default(false)
@@ -136,6 +137,37 @@ model Crafter {
   @@index([status])
   @@index([isActive])
   @@index([mobile])
+}
+
+model CrafterInvite {
+  id           String    @id @default(cuid())
+  mobile       String    @unique
+  name         String
+  inviteCode   String    @unique
+  status       String    @default("PENDING") // PENDING, REGISTERED, EXPIRED
+  smsSentAt    DateTime?
+  registeredAt DateTime?
+  createdBy    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mobile])
+  @@index([status])
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([phone, code])
+  @@index([expiresAt])
 }
 
 model Category {
