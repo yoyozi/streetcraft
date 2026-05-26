@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Crafter" ADD COLUMN IF NOT EXISTS "workSamples" TEXT[] DEFAULT ARRAY[]::TEXT[];
