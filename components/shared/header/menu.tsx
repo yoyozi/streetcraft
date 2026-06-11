@@ -6,11 +6,13 @@ import { auth } from "@/auth";
 import { signOutUser } from "@/lib/actions/user.actions";
 import { SignInButton } from "./sign-in-button";
 import UserButton from "./user-button";
+import { getCartItemCount } from "@/lib/actions/cart.actions";
 
 
 
 const Menu = async () => {
     const session = await auth();
+    const cartCount = await getCartItemCount();
     
     // Debug logging
     // if (session?.user) {
@@ -23,6 +25,11 @@ const Menu = async () => {
                     <Link href='/cart'>
                         <ShoppingCart />
                         Cart
+                        {cartCount > 0 && (
+                            <span className='ml-1 bg-white text-black rounded-full px-1.5 py-0.5 text-xs font-bold'>
+                                {cartCount}
+                            </span>
+                        )}
                     </Link>
                 </Button>
                 <UserButton />
@@ -42,6 +49,11 @@ const Menu = async () => {
                             <Link href='/cart'>
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Cart
+                                {cartCount > 0 && (
+                                    <span className='ml-1 bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-xs font-bold'>
+                                        {cartCount}
+                                    </span>
+                                )}
                             </Link>
                         </Button>
                         

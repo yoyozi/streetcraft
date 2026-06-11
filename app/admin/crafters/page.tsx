@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getAllCrafters } from '@/lib/actions/crafter.actions';
+import { getAllCrafters, getPendingCrafters } from '@/lib/actions/crafter.actions';
 import { verifyAdmin } from '@/lib/actions/auth-actions';
 import ToggleCrafterStatusButton from './toggle-crafter-status-button';
 import DeleteDialog from '@/components/shared/delete-dialog';
@@ -21,6 +21,8 @@ const AdminCraftersPage = async () => {
 
   const result = await getAllCrafters();
   const crafters = result.success ? result.data : [];
+  const pendingResult = await getPendingCrafters();
+  const pendingCount = pendingResult.success ? pendingResult.data.length : 0;
 
   return (
     <div className='space-y-2'>
@@ -30,7 +32,14 @@ const AdminCraftersPage = async () => {
         </div>
         <div className="flex gap-2">
           <Button asChild variant='secondary'>
-            <Link href='/admin/crafters/review'>Review Applications</Link>
+            <Link href='/admin/crafters/review' className="flex items-center gap-2">
+              Review Applications
+              {pendingCount > 0 && (
+                <Badge variant="destructive" className="text-xs px-1.5 py-0.5 min-w-[1.25rem] justify-center">
+                  {pendingCount}
+                </Badge>
+              )}
+            </Link>
           </Button>
           <Button asChild variant='outline'>
             <Link href='/admin/crafters/invite'>Invite Crafter</Link>

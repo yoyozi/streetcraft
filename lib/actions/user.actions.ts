@@ -4,6 +4,10 @@ import {
     signInFormSchema, 
     signUpFormSchema, 
     updateUserSchema } from "@/lib/validations/user";
+import { 
+    changePasswordSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema } from "@/lib/validators";
 import { ShippingAddressSchema, PaymentMethodSchema } from "@/lib/validations/order";
 
 import { auth, signIn, signOut } from "@/auth"; // root-level import
@@ -11,7 +15,8 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { prisma } from '@/lib/prisma';
 import { formatError } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
-import { hash } from 'bcrypt-ts-edge';
+import { hash, compare } from 'bcrypt-ts-edge';
+import { sendPasswordResetEmail } from '@/email/password-reset-email';
 import { ActionResponse, ShippingAddress } from "@/types";
 import { redirect } from "next/navigation";
 import z from "zod";
@@ -31,15 +36,45 @@ export async function signInWithCredentials(
 
     const callbackUrl = (formData.get('callbackUrl') as string) || '/';
   
-    // Check if user requires password reset BEFORE signing in
-    const user = await prisma.user.findUnique({ where: { email: userData.email } });
+    // Resolve user - check if input is a phone number
+    const input = userData.email.trim();
+    const isPhone = /^(\+?27|0)\d{9,}$/.test(input.replace(/[\s\-()]/g, ''));
+    let user;
+    if (isPhone) {
+      let normalized = input.replace(/[\s\-()]/g, '');
+      if (normalized.startsWith('+')) normalized = normalized.slice(1);
+      if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
+      const crafter = await prisma.crafter.findFirst({
+        where: { mobile: normalized },
+        select: { userId: true },
+      });
+      if (crafter) {
+        user = await prisma.user.findUnique({ where: { id: crafter.userId } });
+      }
+    } else {
+      user = await prisma.user.findUnique({ where: { email: input } });
+    }
     
     if (user && user.requirePasswordReset) {
+      // Generate reset token for password reset
+      const resetToken = Math.random().toString(36).substring(2, 15) + 
+                         Math.random().toString(36).substring(2, 15);
+      const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+
+      // Update user with reset token
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken,
+          resetTokenExpires
+        }
+      });
+
       await signIn('credentials', {
         email: userData.email,
         password: userData.password,
         redirect: true,
-        redirectTo: '/reset-password',
+        redirectTo: `/reset-password?token=${resetToken}`,
       });
     } else {
       // Normal sign in flow - redirect based on role
@@ -215,6 +250,200 @@ export async function updateProfile( user: { name:string; email:string; }) {
     });
 
     return { success: true, message: "Profile updated successfully" };
+    
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+// Change user password
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<ActionResponse> {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { success: false, message: "User not found" };
+    }
+
+    // Validate input
+    const passwordData = changePasswordSchema.parse(data);
+
+    // Get current user with password
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { password: true }
+    });
+
+    if (!user || !user.password) {
+      return { success: false, message: "User not found or no password set" };
+    }
+
+    // Verify current password
+    const isPasswordValid = await compare(passwordData.currentPassword, user.password);
+    if (!isPasswordValid) {
+      return { success: false, message: "Current password is incorrect" };
+    }
+
+    // Hash new password
+    const hashedPassword = await hash(passwordData.newPassword, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { password: hashedPassword }
+    });
+
+    return { success: true, message: "Password changed successfully" };
+    
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+// Forgot password - send reset token
+export async function forgotPassword(data: { email: string }): Promise<ActionResponse> {
+  try {
+    // Validate input
+    const { email } = forgotPasswordSchema.parse(data);
+
+    // Check if input is email or phone number
+    const input = email.trim();
+    const isPhone = /^(\+?27|0)\d{9,}$/.test(input.replace(/[\s\-()]/g, ''));
+    
+    let user;
+    
+    if (isPhone) {
+      // Normalize phone number
+      let normalizedPhone = input.replace(/[\s\-()]/g, '');
+      if (normalizedPhone.startsWith('+')) normalizedPhone = normalizedPhone.slice(1);
+      if (normalizedPhone.startsWith('0')) normalizedPhone = '27' + normalizedPhone.slice(1);
+      
+      // Find user by phone number
+      user = await prisma.user.findUnique({
+        where: { phoneNumber: normalizedPhone }
+      });
+    } else {
+      // Find user by email
+      user = await prisma.user.findUnique({
+        where: { email: input }
+      });
+    }
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return { success: true, message: "If an account exists, a reset link has been sent" };
+    }
+
+    // Generate reset token
+    const resetToken = Math.random().toString(36).substring(2, 15) + 
+                       Math.random().toString(36).substring(2, 15);
+    
+    // Set token expiration (1 hour from now)
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    // Update user with reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken,
+        resetTokenExpires
+      }
+    });
+
+    // Determine send method based on user role
+    // Crafters get SMS, regular users and admins get email
+    const useSMS = user.role === 'craft';
+    
+    // Get contact info based on role
+    let contactInfo = '';
+    if (useSMS) {
+      // For crafters, try to get phone number from user record or crafter profile
+      contactInfo = user.phoneNumber || '';
+      if (!contactInfo && user.crafterId) {
+        const crafter = await prisma.crafter.findUnique({
+          where: { id: user.crafterId },
+          select: { mobile: true }
+        });
+        contactInfo = crafter?.mobile || '';
+      }
+    } else {
+      // For regular users and admins, use email
+      contactInfo = user.email;
+    }
+
+    // Send reset link via appropriate method
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+    const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+
+    if (useSMS && contactInfo) {
+      // Send SMS for crafters
+      console.log(`SMS would be sent to crafter ${contactInfo}: Reset your password at ${resetLink}`);
+      // TODO: Implement SMS sending via your SMS provider (Clickatell)
+    } else if (!useSMS && contactInfo) {
+      // Send email for regular users and admins
+      try {
+        await sendPasswordResetEmail({
+          to: contactInfo,
+          resetLink,
+          userName: user.name
+        });
+      } catch (emailError) {
+        console.error('Failed to send password reset email:', emailError);
+        // Continue anyway - don't block the flow if email fails
+      }
+    } else {
+      console.log(`User role: ${user.role}, but no contact info available for password reset`);
+    }
+
+    return { success: true, message: "If an account exists, a reset link has been sent" };
+    
+  } catch (error) {
+    return formatError(error);
+  }
+}
+
+// Reset password with token
+export async function resetPassword(data: {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<ActionResponse> {
+  try {
+    // Validate input
+    const passwordData = resetPasswordSchema.parse(data);
+
+    // Find user with valid reset token
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: passwordData.token,
+        resetTokenExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return { success: false, message: "Invalid or expired reset token" };
+    }
+
+    // Hash new password
+    const hashedPassword = await hash(passwordData.newPassword, 10);
+
+    // Update password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null
+      }
+    });
+
+    return { success: true, message: "Password has been reset successfully" };
     
   } catch (error) {
     return formatError(error);

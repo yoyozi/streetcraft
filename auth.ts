@@ -70,9 +70,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const input = (credentials.email as string).trim();
+        let user;
+
+        // Check if input looks like a phone number (starts with 0, +27, or 27)
+        const isPhone = /^(\+?27|0)\d{9,}$/.test(input.replace(/[\s\-()]/g, ''));
+        if (isPhone) {
+          let normalized = input.replace(/[\s\-()]/g, '');
+          if (normalized.startsWith('+')) normalized = normalized.slice(1);
+          if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
+          const crafter = await prisma.crafter.findFirst({
+            where: { mobile: normalized },
+            select: { userId: true },
+          });
+          if (crafter) {
+            user = await prisma.user.findUnique({
+              where: { id: crafter.userId },
+            });
+          }
+        } else {
+          user = await prisma.user.findUnique({
+            where: { email: input },
+          });
+        }
 
         if (!user || !user.isActive || !user.password) return null;
 
@@ -152,23 +172,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     /**
      * Redirect callback - controls where users are redirected after sign-in
      * Used to redirect users requiring password reset to the reset page
+     * Redirects crafters to their dashboard after login
      */
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl, token }) {
       // If URL is the reset password page, allow it
       if (url.startsWith(baseUrl + '/reset-password')) {
         return url;
       }
-      
+
+      // Redirect crafters to their dashboard
+      if (token?.role === 'craft') {
+        return `${baseUrl}/crafter`;
+      }
+
       // If URL is relative, make it absolute
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-      
+
       // If URL is on the same origin, allow it
       if (new URL(url).origin === baseUrl) {
         return url;
       }
-      
+
       // Otherwise redirect to base URL
       return baseUrl;
     },

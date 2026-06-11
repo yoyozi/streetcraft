@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { Product } from '@/types';
-import { updateProductAvailability, updateProductCostPrice } from '@/lib/actions/product.actions';
+import { updateProductAvailability, updateProductCostPrice, toggleProductActive } from '@/lib/actions/product.actions';
 import { toast } from 'sonner';
 
 interface CrafterProductsListProps {
@@ -27,12 +27,12 @@ const fetcher = async (url: string) => {
 
 // Inline cost price editor component
 function CostPriceEditor({ product, onUpdate }: { product: Product; onUpdate: () => void }) {
-  const [costPrice, setCostPrice] = useState(product.costPrice?.toString() || '0');
+  const [costPrice, setCostPrice] = useState(String(product.costPrice || 0));
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Sync local state when product data updates
   useEffect(() => {
-    setCostPrice(product.costPrice?.toString() || '0');
+    setCostPrice(String(product.costPrice || 0));
   }, [product.costPrice]);
 
   const handleUpdate = async () => {
@@ -44,7 +44,7 @@ function CostPriceEditor({ product, onUpdate }: { product: Product; onUpdate: ()
 
     setIsUpdating(true);
     const result = await updateProductCostPrice(product.id, numValue);
-    
+
     if (result.success) {
       toast.success('Cost price updated successfully');
       // Immediate revalidation without deduping
@@ -52,7 +52,7 @@ function CostPriceEditor({ product, onUpdate }: { product: Product; onUpdate: ()
     } else {
       toast.error(result.message || 'Failed to update cost price');
       // Revert on error
-      setCostPrice(product.costPrice?.toString() || '0');
+      setCostPrice(String(product.costPrice || 0));
     }
     setIsUpdating(false);
   };
@@ -73,8 +73,8 @@ function CostPriceEditor({ product, onUpdate }: { product: Product; onUpdate: ()
           className="flex-1"
           disabled={isUpdating}
         />
-        <Button 
-          onClick={handleUpdate} 
+        <Button
+          onClick={handleUpdate}
           disabled={isUpdating || costPrice === product.costPrice?.toString()}
           size="sm"
         >
@@ -90,12 +90,12 @@ function CostPriceEditor({ product, onUpdate }: { product: Product; onUpdate: ()
 
 // Inline availability editor component
 function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate: () => void }) {
-  const [availability, setAvailability] = useState(product.availability.toString());
+  const [availability, setAvailability] = useState(String(product.availability));
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Sync local state when product data updates
   useEffect(() => {
-    setAvailability(product.availability.toString());
+    setAvailability(String(product.availability));
   }, [product.availability]);
 
   const handleUpdate = async () => {
@@ -107,7 +107,7 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
 
     setIsUpdating(true);
     const result = await updateProductAvailability(product.id, numValue);
-    
+
     if (result.success) {
       toast.success('Availability updated successfully');
       // Immediate revalidation without deduping
@@ -115,7 +115,7 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
     } else {
       toast.error(result.message || 'Failed to update availability');
       // Revert on error
-      setAvailability(product.availability.toString());
+      setAvailability(String(product.availability));
     }
     setIsUpdating(false);
   };
@@ -135,8 +135,8 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
           className="flex-1"
           disabled={isUpdating}
         />
-        <Button 
-          onClick={handleUpdate} 
+        <Button
+          onClick={handleUpdate}
           disabled={isUpdating || availability === product.availability.toString()}
           size="sm"
         >
@@ -163,6 +163,16 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
   );
 
   const products = data?.data || [];
+
+  const handleToggleActive = async (productId: string, currentStatus: boolean) => {
+    const result = await toggleProductActive(productId);
+    if (result.success) {
+      toast.success(result.message);
+      mutate();
+    } else {
+      toast.error(result.message);
+    }
+  };
 
   const getAvailabilityLabel = (availability: number) => {
     if (availability === -1) return { label: 'Not Available', variant: 'destructive' as const, className: '' };
@@ -214,7 +224,7 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
         <div className="flex flex-col gap-6 max-w-4xl mx-auto">
           {products.map((product) => {
             const availability = getAvailabilityLabel(product.availability);
-            
+
             return (
               <Card key={product.id} className="overflow-hidden w-full !pt-0">
                 <div className="relative w-full h-96 bg-muted">
@@ -243,9 +253,18 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
                         R{product.costPrice || '0'}
                       </span>
                     </div>
-                    <Badge variant={availability.variant} className={availability.className}>
-                      {availability.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={availability.variant} className={availability.className}>
+                        {availability.label}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant={product.isActive ? "destructive" : "default"}
+                        onClick={() => handleToggleActive(product.id, product.isActive)}
+                      >
+                        {product.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
                   </div>
                   <CostPriceEditor product={product} onUpdate={() => mutate()} />
                   <AvailabilityEditor product={product} onUpdate={() => mutate()} />

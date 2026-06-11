@@ -40,13 +40,14 @@ const CredentialsSignInForm = ({ callbackUrl }: { callbackUrl: string }) => {
             <input type='hidden' name='callbackUrl' value={callbackUrl} />
             <div className="space-y-6">
                 <div>
-                    <Label htmlFor='email'>Email</Label>
+                    <Label htmlFor='email'>Email or Mobile Number</Label>
                     <Input 
                         id='email' 
                         name='email' 
-                        type='email' 
+                        type='text' 
                         required 
-                        autoCapitalize="email"
+                        autoCapitalize="none"
+                        placeholder="email@example.com or 0821234567"
                     />
                 </div>
                 <div>
@@ -69,6 +70,11 @@ const CredentialsSignInForm = ({ callbackUrl }: { callbackUrl: string }) => {
                 <div className="text-sm text-center text-muted-foreground">Don&apos;t have an account?{' '} 
                     <Link href={`/sign-up${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`} target='_self' className='link'>
                         Sign Up
+                    </Link>
+                </div>
+                <div className="text-center">
+                    <Link href="/forgot-password" className='link text-sm'>
+                        Forgot Password?
                     </Link>
                 </div>
             </div>

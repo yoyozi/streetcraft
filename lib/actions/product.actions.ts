@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { FIRST_PAGE_PRODUCTS_LIMIT, PAGE_SIZE } from "../constants";
 import { insertProductSchema, updateProductSchema } from '@/lib/validations/product';
 import { UTApi } from 'uploadthing/server';
+import { auth } from '@/auth';
 
 // ============================================================================
 // CUSTOMER-FACING FUNCTIONS
@@ -258,7 +259,12 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; mes
 
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) throw new Error('Product not found');
-  
+
+      // Remove related records that block deletion
+      await prisma.cartItem.deleteMany({ where: { productId: id } });
+      await prisma.review.deleteMany({ where: { productId: id } });
+      await prisma.orderItem.deleteMany({ where: { productId: id } });
+
       await prisma.product.delete({ where: { id } });
   
       revalidatePath('/admin/products');
@@ -277,11 +283,16 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; mes
 
 
 // Create Product
-export async function createProduct(data: z.infer<typeof insertProductSchema>): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
+export async function createProduct(data: z.infer<typeof insertProductSchema> & { crafter?: string | null }): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
     try {
       const authCheck = await checkAdminAuth();
       if (!authCheck.authorized) {
         return { success: false, error: authCheck.error };
+      }
+
+      // Map form's 'crafter' field to 'crafterId'
+      if ('crafter' in data && data.crafter && !data.crafterId) {
+        data.crafterId = data.crafter;
       }
 
       // Validate
@@ -293,7 +304,7 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>): 
       
       // Check if trying to set isFirstPage to true
       if (product.isFirstPage) {
-        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true, isActive: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -310,13 +321,18 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>): 
           category: product.category,
           description: product.description,
           images: product.images,
-          isFeatured: product.isFeatured,
           isFirstPage: product.isFirstPage,
+          isUnique: product.isUnique ?? false,
+          isActive: product.isActive ?? false,
           banner: product.banner,
           price: Number(product.price),
           costPrice: Number(product.costPrice),
+          weight: Number(product.weight) || 0,
+          height: Number(product.height) || 0,
+          width: Number(product.width) || 0,
+          depth: Number(product.depth) || 0,
           priceNeedsReview: product.priceNeedsReview ?? false,
-          availability: product.availability ?? 3,
+          availability: product.isUnique ? 1 : (product.availability ?? 3),
           tags: product.tags ?? [],
           crafterId: product.crafterId || null,
         },
@@ -338,11 +354,16 @@ export async function createProduct(data: z.infer<typeof insertProductSchema>): 
   
 
 // Update Product
-export async function updateProduct(data: z.infer<typeof updateProductSchema>): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
+export async function updateProduct(data: z.infer<typeof updateProductSchema> & { crafter?: string | null }): Promise<{ success: boolean; message?: string; error?: string; data?: any }> {
     try {
       const authCheck = await checkAdminAuth();
       if (!authCheck.authorized) {
         return { success: false, error: authCheck.error };
+      }
+
+      // Map form's 'crafter' field to 'crafterId'
+      if ('crafter' in data && !data.crafterId) {
+        data.crafterId = data.crafter || null;
       }
 
       // Validate
@@ -357,7 +378,7 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>): 
   
       // Check if trying to set isFirstPage to true when it wasn't before
       if (product.isFirstPage && !productExists.isFirstPage) {
-        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true, isActive: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -376,13 +397,18 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>): 
           category: product.category,
           description: product.description,
           images: product.images,
-          isFeatured: product.isFeatured,
           isFirstPage: product.isFirstPage,
+          isUnique: product.isUnique ?? false,
+          isActive: product.isActive ?? false,
           banner: product.banner,
           price: Number(product.price),
           costPrice: Number(product.costPrice),
+          weight: Number(product.weight) || 0,
+          height: Number(product.height) || 0,
+          width: Number(product.width) || 0,
+          depth: Number(product.depth) || 0,
           priceNeedsReview: product.priceNeedsReview,
-          availability: product.availability,
+          availability: product.isUnique ? 1 : product.availability,
           tags: product.tags,
           crafterId: product.crafterId || null,
         },
@@ -432,12 +458,13 @@ export async function getProductById(productId: string) {
 export async function getAllCraftersForDrop() {
   const crafters = await prisma.crafter.findMany({
     where: { isActive: true },
-    select: { id: true, businessName: true },
+    select: { id: true, businessName: true, category: true },
   });
     
   return crafters.map((crafter) => ({
     id: crafter.id,
     name: crafter.businessName,
+    category: crafter.category || null,
   }));
 }
 
@@ -452,26 +479,6 @@ export async function getAllCategories() {
 }
 
 
-// Get featured products
-export async function getFeaturedProducts() {
-    const data = await prisma.product.findMany({
-        where: { isFeatured: true, isActive: true },
-        orderBy: { createdAt: 'desc' },
-        take: 4,
-    });
-    
-    return data.map((p) => ({
-        ...p,
-        _id: p.id,
-        price: p.price.toString(),
-        rating: p.rating?.toString() || '0',
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt?.toISOString(),
-        images: p.images || [],
-        crafter: p.crafterId || null,
-    }));
-}
-
 
 // Toggle product isFirstPage status (ADMIN ONLY)
 export async function toggleProductFirstPage(productId: string): Promise<{ success: boolean; message: string; error?: string }> {
@@ -482,7 +489,7 @@ export async function toggleProductFirstPage(productId: string): Promise<{ succe
   
       // If trying to set to true, check the limit
       if (!product.isFirstPage) {
-        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true } });
+        const firstPageCount = await prisma.product.count({ where: { isFirstPage: true, isActive: true } });
         
         if (firstPageCount >= FIRST_PAGE_PRODUCTS_LIMIT) {
           return {
@@ -496,8 +503,6 @@ export async function toggleProductFirstPage(productId: string): Promise<{ succe
         where: { id: productId },
         data: { isFirstPage: !product.isFirstPage },
       });
-  
-      revalidatePath('/admin/products');
   
       return {
         success: true,
@@ -840,6 +845,7 @@ export async function getAdminProducts({
     lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
     availability: product.availability,
     isActive: product.isActive,
+    isUnique: product.isUnique,
     isFirstPage: product.isFirstPage,
     rating: product.rating?.toString() || '0',
     createdAt: product.createdAt.toISOString(),
@@ -858,6 +864,7 @@ export async function getAdminProducts({
 
 /**
  * Toggle product active status (ADMIN ONLY)
+ * Cannot activate unless cost, retail, mass, height, width, depth, availability and crafter are filled.
  */
 export async function toggleProductActive(productId: string): Promise<{ success: boolean; message: string; isActive?: boolean }> {
   try {
@@ -871,13 +878,34 @@ export async function toggleProductActive(productId: string): Promise<{ success:
     if (!product) {
       return { success: false, message: 'Product not found' };
     }
+
+    // If activating, check required fields
+    if (!product.isActive) {
+      const missing: string[] = [];
+      if (!product.costPrice || product.costPrice <= 0) missing.push('Cost Price');
+      if (!product.price || product.price <= 0) missing.push('Retail Price');
+      if (!product.weight || product.weight <= 0) missing.push('Mass');
+      if (!product.height || product.height <= 0) missing.push('Height');
+      if (!product.width || product.width <= 0) missing.push('Width');
+      if (!product.depth || product.depth <= 0) missing.push('Depth');
+      if (product.availability === null || product.availability === undefined) missing.push('Availability');
+      if (!product.crafterId) missing.push('Crafter');
+
+      if (missing.length > 0) {
+        return { success: false, message: `Cannot activate: fill in ${missing.join(', ')} first` };
+      }
+
+      // Check crafter is approved (not pending registration)
+      const crafter = await prisma.crafter.findUnique({ where: { id: product.crafterId } });
+      if (crafter?.status === 'PENDING') {
+        return { success: false, message: 'Cannot activate: crafter registration must be approved first' };
+      }
+    }
     
     const updated = await prisma.product.update({
       where: { id: productId },
       data: { isActive: !product.isActive },
     });
-    
-    revalidatePath('/admin/products');
     
     return {
       success: true,
@@ -887,5 +915,76 @@ export async function toggleProductActive(productId: string): Promise<{ success:
   } catch (error) {
     console.error('Error toggling product active status:', error);
     return { success: false, message: 'Failed to toggle product status' };
+  }
+}
+
+// Get crafter dashboard stats
+export async function getCrafterDashboardStats(): Promise<{
+  success: boolean;
+  data?: {
+    registeredItems: number;
+    approvedItems: number;
+    soldItems: number;
+    fundsDue: number;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== 'craft') {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const crafter = await prisma.crafter.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    if (!crafter) {
+      return { success: false, error: 'Crafter not found' };
+    }
+
+    // Get all products for this crafter
+    const products = await prisma.product.findMany({
+      where: { crafterId: crafter.id },
+      include: {
+        orderItems: {
+          include: {
+            order: true,
+          },
+        },
+      },
+    });
+
+    const registeredItems = products.length;
+    const approvedItems = products.filter(p => p.isActive).length;
+
+    // Calculate sold items and funds due
+    let soldItems = 0;
+    let fundsDue = 0;
+
+    for (const product of products) {
+      for (const orderItem of product.orderItems) {
+        if (orderItem.order.isPaid) {
+          soldItems += orderItem.qty;
+          // Funds due = (price - costPrice) * qty
+          const profitPerItem = product.price - product.costPrice;
+          fundsDue += profitPerItem * orderItem.qty;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        registeredItems,
+        approvedItems,
+        soldItems,
+        fundsDue,
+      },
+    };
+  } catch (error) {
+    console.error('Error getting crafter dashboard stats:', error);
+    return { success: false, error: 'Failed to get dashboard stats' };
   }
 }

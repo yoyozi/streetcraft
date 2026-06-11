@@ -69,7 +69,9 @@ const ProductDetailsPage = async (props: { params: Promise<{ slug: string }> }) 
                                         <Badge variant='destructive'>{product.availability} days</Badge>
                                     )}
                                 </div>
-                                {product.stock > 0 && (
+                                {product.isUnique && product.availability <= 0 ? (
+                                    <Badge variant='destructive' className='w-full justify-center py-2'>Sold</Badge>
+                                ) : (
                                     <AddToCart 
                                         cart={cart}
                                         item={{
@@ -80,6 +82,7 @@ const ProductDetailsPage = async (props: { params: Promise<{ slug: string }> }) 
                                             qty: 1,
                                             image: product.images?.[0] || '/images/placeholder.png'
                                         }}
+                                        isUnique={product.isUnique}
                                     />
                                 )}
                             </CardContent>

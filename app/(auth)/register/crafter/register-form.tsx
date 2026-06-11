@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { registerCrafterByPhone } from '@/lib/actions/invite.actions';
 import { useUploadThing } from '@/lib/uploadthing';
+import { optimizeImages } from '@/lib/image-optimizer';
 import Image from 'next/image';
 
 interface CrafterRegisterFormProps {
@@ -18,6 +19,7 @@ interface CrafterRegisterFormProps {
 
 export default function CrafterRegisterForm({ inviteCode, name, mobile }: CrafterRegisterFormProps) {
   const [crafterName, setCrafterName] = useState(name);
+  const [businessName, setBusinessName] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -39,7 +41,8 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
     setUploading(true);
     setError('');
     try {
-      const res = await startUpload(toUpload);
+      const optimized = await optimizeImages(toUpload);
+      const res = await startUpload(optimized);
       if (res) {
         const urls = res.map((f) => f.ufsUrl);
         setUploadedImages((prev) => [...prev, ...urls].slice(0, 3));
@@ -78,6 +81,7 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
       const result = await registerCrafterByPhone({
         inviteCode,
         name: crafterName.trim(),
+        businessName: businessName.trim() || crafterName.trim(),
         mobile,
         location: location.trim(),
         description: description.trim(),
@@ -106,6 +110,9 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
 
   return (
     <div className="space-y-5">
+      <p className="text-center text-sm text-muted-foreground -mt-2 mb-2">
+        Welcome {crafterName}! Tell us about yourself and your craft.
+      </p>
       <div>
         <Label htmlFor="crafterName">Your Name</Label>
         <Input
@@ -114,6 +121,17 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
           value={crafterName}
           onChange={(e) => setCrafterName(e.target.value)}
           placeholder="Enter your full name"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="businessName">Business Name <span className="text-muted-foreground text-xs">(optional)</span></Label>
+        <Input
+          id="businessName"
+          type="text"
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+          placeholder="e.g. Charles Crafts, leave blank to use your name"
         />
       </div>
 

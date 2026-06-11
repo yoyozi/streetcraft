@@ -54,10 +54,11 @@ export default async function CrafterRegisterPage(props: {
                 <span className="text-2xl font-bold">SC</span>
               </div>
             </Link>
-            <CardTitle className="text-center">Already Registered</CardTitle>
+            <CardTitle className="text-center">Application Submitted</CardTitle>
             <CardDescription className="text-center">
-              This invite has already been used. You can{' '}
-              <Link href="/sign-in" className="underline">sign in</Link> to your account.
+              Your application has been received. We&apos;ll review your work and contact you via SMS.
+              If you&apos;re already registered, you can{' '}
+              <Link href="/sign-in" className="underline">sign in</Link>.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -75,9 +76,6 @@ export default async function CrafterRegisterPage(props: {
             </div>
           </Link>
           <CardTitle className="text-center">Register as Crafter</CardTitle>
-          <CardDescription className="text-center">
-            Welcome {invite.name}! Tell us about yourself and your craft.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <CrafterRegisterForm inviteCode={code} name={invite.name} mobile={invite.mobile} />

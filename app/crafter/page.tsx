@@ -1,9 +1,9 @@
 import { auth } from '@/auth';
-import CrafterProductsList from './crafter-products-list';
+import CrafterDashboard from './crafter-dashboard';
 
-export default async function CrafterProducts() {
+export default async function CrafterDashboardPage() {
   const session = await auth();
   const crafterName = session?.user?.name || 'Your';
 
-  return <CrafterProductsList crafterName={crafterName} />;
+  return <CrafterDashboard crafterName={crafterName} />;
 }

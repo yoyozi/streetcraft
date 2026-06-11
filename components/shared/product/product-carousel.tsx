@@ -34,14 +34,14 @@ export function ProductCarousel({ data }: { data: Product[] }) {
         {data.map((product: Product) => (
           <CarouselItem key={product.id}>
             <Link href={`/product/${product.slug}`}>
-              <div className='relative   mx-auto  '>
+              <div className='relative mx-auto w-full aspect-[1920/680] overflow-hidden rounded-sm'>
                 <Image
                   alt={product.name}
-                  src={product.banner || '/images/banner-1.jpg'}
-                  width='0'
-                  height='0'
+                  src={product.banner || product.images?.[0] || '/images/banner-1.jpg'}
+                  fill
                   sizes='100vw'
-                  className='w-full h-auto'
+                  className='object-cover'
+                  unoptimized
                 />
                 <div className='absolute inset-0 flex items-end justify-center'>
                   <h2 className=' bg-gray-900 bg-opacity-50 text-2xl font-bold px-2 text-white  '>

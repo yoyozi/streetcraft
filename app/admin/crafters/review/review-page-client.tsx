@@ -18,7 +18,7 @@ interface PendingCrafter {
   mobile: string;
   workSamples: string[];
   createdAt: Date;
-  user: { name: string | null; phoneNumber: string | null };
+  user: { name: string | null };
 }
 
 export default function ReviewPageClient({ crafters: initial }: { crafters: PendingCrafter[] }) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { updateProfileSchema } from "@/lib/validators";
+import { updateProfileSchema, changePasswordSchema } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
@@ -9,12 +9,16 @@ import { toast } from "sonner";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage, Form as FormUI } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateProfile } from "@/lib/actions/user.actions";
-import { useEffect } from "react";
+import { updateProfile, changePassword } from "@/lib/actions/user.actions";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Profileform = () => {
     const { data: session, update } = useSession();
-    const form = useForm<z.infer<typeof updateProfileSchema>>({
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    
+    // Profile update form
+    const profileForm = useForm<z.infer<typeof updateProfileSchema>>({
         resolver: zodResolver(updateProfileSchema),
         defaultValues: {
         name: session?.user?.name ?? '',
@@ -22,15 +26,25 @@ const Profileform = () => {
         },
     });
 
+    // Password change form
+    const passwordForm = useForm<z.infer<typeof changePasswordSchema>>({
+        resolver: zodResolver(changePasswordSchema),
+        defaultValues: {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+        },
+    });
+
     // Keep form values in sync when session updates (e.g., after profile update)
     useEffect(() => {
-        form.reset({
+        profileForm.reset({
             name: session?.user?.name ?? '',
             email: session?.user?.email ?? '',
         });
-    }, [session?.user?.name, session?.user?.email, form]);
+    }, [session?.user?.name, session?.user?.email, profileForm]);
 
-    const onSubmit = async (values: z.infer<typeof updateProfileSchema>) => {
+    const onProfileSubmit = async (values: z.infer<typeof updateProfileSchema>) => {
         const res = await updateProfile(values)
 
         if(!res.success) {
@@ -43,50 +57,150 @@ const Profileform = () => {
         toast.success(res.message);
     }
 
+    const onPasswordSubmit = async (values: z.infer<typeof changePasswordSchema>) => {
+        const res = await changePassword(values)
+
+        if(!res.success) {
+            return toast.error(res.message);
+        }
+
+        toast.success(res.message);
+        passwordForm.reset();
+        setShowPasswordForm(false);
+    }
+
     return (
-        <FormUI {...form}>
-            <form className="flex flex-col gap-5" onSubmit={form.handleSubmit(onSubmit)} >
-                <div className="flex flex-col gap-5">
+        <div className="space-y-6">
+            {/* Profile Update Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Profile Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <FormUI {...profileForm}>
+                        <form className="flex flex-col gap-5" onSubmit={profileForm.handleSubmit(onProfileSubmit)} >
+                            <div className="flex flex-col gap-5">
 
-                    <FormField 
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                    <Input disabled placeholder="Email" className='input-field' {...field} />
-                                </FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}
-                    />
+                                <FormField 
+                                    control={profileForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input disabled placeholder="Email" className='input-field' {...field} />
+                                            </FormControl>
+                                            <FormMessage/>
+                                        </FormItem>
+                                    )}
+                                />
 
-                    <FormField 
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Name</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Name" className='input-field' {...field} />
-                                </FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}
-                    />
-                </div>
+                                <FormField 
+                                    control={profileForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Name</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Name" className='input-field' {...field} />
+                                            </FormControl>
+                                            <FormMessage/>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
-                <Button 
-                    type='submit' 
-                    size='lg' 
-                    className='button col-span-2 w-full' 
-                    disabled={ form.formState.isSubmitting }>
-                        { form.formState.isSubmitting ? 'Submitting...' : 'Update Profile'}
-                </Button>
-            
-            </form>
-        </FormUI>
+                            <Button 
+                                type='submit' 
+                                size='lg' 
+                                className='button col-span-2 w-full' 
+                                disabled={ profileForm.formState.isSubmitting }>
+                                { profileForm.formState.isSubmitting ? 'Submitting...' : 'Update Profile'}
+                            </Button>
+                        
+                        </form>
+                    </FormUI>
+                </CardContent>
+            </Card>
+
+            {/* Password Change Card */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Change Password</CardTitle>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPasswordForm(!showPasswordForm)}
+                        >
+                            {showPasswordForm ? 'Cancel' : 'Change Password'}
+                        </Button>
+                    </div>
+                </CardHeader>
+                {showPasswordForm && (
+                    <CardContent>
+                        <FormUI {...passwordForm}>
+                            <form className="flex flex-col gap-5" onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} >
+                                <div className="flex flex-col gap-5">
+
+                                    <FormField 
+                                        control={passwordForm.control}
+                                        name="currentPassword"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Current Password</FormLabel>
+                                                <FormControl>
+                                                    <Input type="password" placeholder="Current password" className='input-field' {...field} />
+                                                </FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField 
+                                        control={passwordForm.control}
+                                        name="newPassword"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>New Password</FormLabel>
+                                                <FormControl>
+                                                    <Input type="password" placeholder="New password" className='input-field' {...field} />
+                                                </FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField 
+                                        control={passwordForm.control}
+                                        name="confirmPassword"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Confirm New Password</FormLabel>
+                                                <FormControl>
+                                                    <Input type="password" placeholder="Confirm new password" className='input-field' {...field} />
+                                                </FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <Button 
+                                    type='submit' 
+                                    size='lg' 
+                                    className='button col-span-2 w-full' 
+                                    disabled={ passwordForm.formState.isSubmitting }>
+                                    { passwordForm.formState.isSubmitting ? 'Updating...' : 'Update Password'}
+                                </Button>
+                            
+                            </form>
+                        </FormUI>
+                    </CardContent>
+                )}
+            </Card>
+        </div>
     );
 };
 

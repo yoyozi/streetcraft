@@ -83,7 +83,25 @@ export async function getLinkedCrafterId(): Promise<string | null> {
     where: { id: session.user.id },
     select: { crafterId: true },
   });
-  return user?.crafterId || null;
+
+  if (user?.crafterId) return user.crafterId;
+
+  // Fallback: find crafter linked via userId
+  const crafter = await prisma.crafter.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
+
+  if (crafter) {
+    // Repair the missing link
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { crafterId: crafter.id },
+    });
+    return crafter.id;
+  }
+
+  return null;
 }
 
 /**

@@ -87,6 +87,7 @@ const ProductCard = ({ product }: { product: Product }) => {
                         height={300} 
                         width={300} 
                         priority={true} 
+                        unoptimized
                         className="object-cover h-64 w-full" />
                 ) : (
                     <div className="h-64 w-full bg-gray-200 flex items-center justify-center">
@@ -99,7 +100,7 @@ const ProductCard = ({ product }: { product: Product }) => {
             <Link href={`/product/${product.slug}`}>
                 <h2 className="text-sm font-medium">{product.name}: {product.description}</h2>
             </Link>
-            <AddToCart cart={cart} item={cartItem} onCartUpdate={refreshCart} />
+            <AddToCart cart={cart} item={cartItem} isUnique={product.isUnique} isSold={product.isUnique && product.availability <= 0} onCartUpdate={refreshCart} />
             <div className="flex-between gap-4">
                 <Rating value={Number(product.rating)} />
                 <ProductPrice value={Number(product.price)} />

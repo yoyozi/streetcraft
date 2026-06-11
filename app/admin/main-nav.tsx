@@ -30,24 +30,36 @@ const links = [
         title: "Users",
         href: "/admin/users"
     },
+    {
+        title: "Product Approvals",
+        href: "/admin/image-approvals"
+    },
+    {
+        title: "Crafter Payments",
+        href: "/admin/crafter-payments"
+    },
+    {
+        title: "Settings",
+        href: "/admin/settings"
+    },
 ]
 
 const MainNav = ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => {
     const pathname = usePathname();
     return (
-        <nav className={cn("flex items-center space-x-4 lg:space-6", className)} {...props}>
-        {links.map((item) => (
-            <Link 
-                key={item.href} 
-                href={item.href} 
-                className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
-                    pathname?.startsWith(item.href) ? "" : "text-muted-foreground"
-                )}
-            >
-                {item.title}
-            </Link>
-        ))}
+        <nav className={cn("flex items-center space-x-4 lg:space-x-6", className)} {...props}>
+            {links.map((item) => (
+                <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                        "text-sm font-medium transition-colors hover:text-primary",
+                        pathname?.startsWith(item.href) ? "" : "text-muted-foreground"
+                    )}
+                >
+                    {item.title}
+                </Link>
+            ))}
         </nav>
     );
 };

@@ -29,6 +29,7 @@ interface Product {
   lastCostPriceUpdate?: string;
   availability: number;
   isActive: boolean;
+  isUnique: boolean;
   category: string;
   rating: string;
   isFirstPage: boolean;
@@ -73,11 +74,14 @@ export default function AdminCrafterProductGroup({
     });
   };
 
-  const getAvailabilityLabel = (availability: number) => {
-    if (availability === -1) return { label: 'Not Available', variant: 'destructive' as const };
-    if (availability === 0) return { label: 'In Stock', variant: 'default' as const };
-    return { label: `${availability} ${availability === 1 ? 'Day' : 'Days'}`, variant: 'secondary' as const };
+  const getAvailabilityLabel = (product: Product) => {
+    if (product.isUnique) return { label: 'Unique', variant: 'default' as const };
+    if (product.availability === -1) return { label: 'Not Available', variant: 'destructive' as const };
+    if (product.availability === 0) return { label: 'In Stock', variant: 'default' as const };
+    return { label: `${product.availability} ${product.availability === 1 ? 'Day' : 'Days'}`, variant: 'secondary' as const };
   };
+
+  const isSoldUnique = (product: Product) => product.isUnique && product.availability <= 0;
 
   const handleDragStart = (e: React.DragEvent, productId: string, productName: string) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -175,8 +179,8 @@ export default function AdminCrafterProductGroup({
                     R{product.costPrice || 0}
                   </TableCell>
                   <TableCell className='w-[120px]'>
-                    <Badge variant={getAvailabilityLabel(product.availability).variant}>
-                      {getAvailabilityLabel(product.availability).label}
+                    <Badge variant={getAvailabilityLabel(product).variant}>
+                      {getAvailabilityLabel(product).label}
                     </Badge>
                   </TableCell>
                   <TableCell className='w-[100px]'>
@@ -188,23 +192,33 @@ export default function AdminCrafterProductGroup({
                     )}
                   </TableCell>
                   <TableCell className='w-[120px] text-center'>
-                    <ToggleFirstPageButton
-                      productId={product.id}
-                      isFirstPage={product.isFirstPage}
-                    />
+                    {isSoldUnique(product) ? (
+                      <span className='text-xs text-muted-foreground'>—</span>
+                    ) : (
+                      <ToggleFirstPageButton
+                        productId={product.id}
+                        isFirstPage={product.isFirstPage}
+                      />
+                    )}
                   </TableCell>
                   <TableCell className='w-[100px] flex gap-1'>
-                    <Button
-                      variant={product.isActive ? 'default' : 'outline'}
-                      size='sm'
-                      onClick={() => handleToggleActive(product.id, product.name)}
-                      disabled={togglingProducts.has(product.id)}
-                    >
-                      {togglingProducts.has(product.id) ? '...' : (product.isActive ? 'Active' : 'Inactive')}
-                    </Button>
-                    <Button asChild variant='outline' size='sm'>
-                      <Link href={`/admin/products/${product.id}`}>Edit</Link>
-                    </Button>
+                    {isSoldUnique(product) ? (
+                      <Badge variant='destructive'>Sold</Badge>
+                    ) : (
+                      <>
+                        <Button
+                          variant={product.isActive ? 'default' : 'outline'}
+                          size='sm'
+                          onClick={() => handleToggleActive(product.id, product.name)}
+                          disabled={togglingProducts.has(product.id)}
+                        >
+                          {togglingProducts.has(product.id) ? '...' : (product.isActive ? 'Active' : 'Inactive')}
+                        </Button>
+                        <Button asChild variant='outline' size='sm'>
+                          <Link href={`/admin/products/${product.id}`}>Edit</Link>
+                        </Button>
+                      </>
+                    )}
                     <DeleteDialog id={product.id} action={deleteProduct} />
                   </TableCell>
                 </TableRow>

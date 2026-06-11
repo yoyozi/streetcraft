@@ -69,7 +69,6 @@ describe.skip('Product Actions - TDD', () => {
       price: '99.99',
       // images must be valid URLs per insertProductSchema
       images: ['https://example.com/images/test-product.jpg'],
-      isFeatured: false,
       isFirstPage: false,
       // banner can be null
       banner: null,
@@ -145,7 +144,6 @@ describe.skip('Product Actions - TDD', () => {
         description: 'T',
         price: 'invalid',
         images: [], // Empty array
-        isFeatured: false,
         isFirstPage: false,
         banner: null,
         costPrice: 'invalid',
@@ -200,7 +198,6 @@ describe.skip('Product Actions - TDD', () => {
       description: 'Updated description',
       price: '149.99',
       images: ['https://example.com/images/updated-product.jpg'],
-      isFeatured: true,
       isFirstPage: true,
       banner: '/images/banner.jpg',
       costPrice: '120.00',

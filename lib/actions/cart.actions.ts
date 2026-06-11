@@ -56,6 +56,11 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
         if (!product) throw new Error('Product not found');
 
+        // Block unique items that are sold out
+        if (product.isUnique && product.availability <= 0) {
+            return { success: false, message: 'This is a unique item and has already been sold' };
+        }
+
         // if there was no Cart we want to create one 
         if (!cart) {
             const prices = calcPrice([item]);
@@ -82,6 +87,7 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
             });
 
             revalidatePath(`/product/${product.slug}`)
+            revalidatePath('/', 'layout')
 
             return {
                 success: true,
@@ -94,6 +100,10 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
             });
 
             if (existItem) {
+                // Block unique items from having qty > 1
+                if (product.isUnique) {
+                    return { success: false, message: 'This is a unique item - only one can be purchased' };
+                }
                 // increase the qty
                 await prisma.cartItem.update({
                     where: { id: existItem.id },
@@ -137,6 +147,7 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
             });
 
             revalidatePath(`/product/${product.slug}`)
+            revalidatePath('/', 'layout')
 
             return {
                 success: true,
@@ -240,6 +251,7 @@ export async function removeItemFromCart(productId: string): Promise<CartActionR
         });
 
         revalidatePath(`/product/${product.slug}`);
+        revalidatePath('/', 'layout');
 
         return {
             success: true,
@@ -248,5 +260,27 @@ export async function removeItemFromCart(productId: string): Promise<CartActionR
 
     } catch (error) {
         return formatError(error)  
+    }
+}
+
+// Get total item count in the user's cart (for header badge)
+export async function getCartItemCount(): Promise<number> {
+    try {
+        const sessionCartId = (await cookies()).get('sessionCartId')?.value;
+        if (!sessionCartId) return 0;
+
+        const session = await auth();
+        const userId = session?.user?.id ? (session.user.id as string) : undefined;
+
+        const cart = await prisma.cart.findFirst({
+            where: userId ? { userId } : { sessionCartId },
+            include: { items: true },
+        });
+
+        if (!cart) return 0;
+
+        return cart.items.reduce((total, item) => total + item.qty, 0);
+    } catch {
+        return 0;
     }
 }

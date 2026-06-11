@@ -135,6 +135,31 @@ export const updateProfileSchema = z.object({
     email: z.string().email("Invalid Email Address"),
 })
 
+// Schema for changing user password
+export const changePasswordSchema = z.object({
+    currentPassword: z.string().min(6, "Current password must be at least six characters"),
+    newPassword: z.string().min(6, "New password must be at least six characters"),
+    confirmPassword: z.string().min(6, "Confirm password must be at least six characters")
+}).refine((data) => data.newPassword === data.confirmPassword, 
+    {message: "New passwords don't match",
+    path: ['confirmPassword']
+});
+
+// Schema for forgot password request
+export const forgotPasswordSchema = z.object({
+    email: z.string().min(1, "Email or mobile number is required")
+});
+
+// Schema for reset password
+export const resetPasswordSchema = z.object({
+    token: z.string().min(1, "Token is required"),
+    newPassword: z.string().min(6, "New password must be at least six characters"),
+    confirmPassword: z.string().min(6, "Confirm password must be at least six characters")
+}).refine((data) => data.newPassword === data.confirmPassword, 
+    {message: "New passwords don't match",
+    path: ['confirmPassword']
+});
+
 // Update User Schema by admins
 export const updateUserSchema = updateProfileSchema.extend({
     id: z.string().min(1, 'Id is required'),
@@ -151,11 +176,16 @@ export const insertProductSchema = z.object({
     category: z.string().min(2, 'Category must be at least 2 characters').max(50, 'Category must not exceed 50 characters'),
     description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must not exceed 2000 characters'),
     images: z.array(z.string().url('Each image must be a valid URL')).min(1, 'Product must have at least one image').max(10, 'Maximum 10 images allowed'),
-    isFeatured: z.boolean(),
     isFirstPage: z.boolean(),
+    isUnique: z.boolean().default(false),
+    isActive: z.boolean().default(false),
     banner: z.string().url('Banner must be a valid URL').nullable(),
     price: currency,
     costPrice: currency,
+    weight: z.coerce.number().min(0, 'Weight must be 0 or greater').default(0),
+    height: z.coerce.number().min(0, 'Height must be 0 or greater').default(0),
+    width: z.coerce.number().min(0, 'Width must be 0 or greater').default(0),
+    depth: z.coerce.number().min(0, 'Depth must be 0 or greater').default(0),
     priceNeedsReview: z.boolean().optional().default(false),
     lastCostPriceUpdate: z.date().optional().nullable(),
     availability: z.number().int().min(-1, 'Availability must be -1 or greater').default(3),
@@ -172,11 +202,16 @@ export const updateProductSchema = z.object({
     category: z.string().min(2, 'Category must be at least 2 characters').max(50, 'Category must not exceed 50 characters'),
     description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must not exceed 2000 characters'),
     images: z.array(z.string()).min(0, 'Images can be empty for updates').max(10, 'Maximum 10 images allowed').optional(),
-    isFeatured: z.boolean(),
     isFirstPage: z.boolean(),
+    isUnique: z.boolean().optional().default(false),
+    isActive: z.boolean().optional().default(false),
     banner: z.string().nullable().optional(),
     price: currency,
     costPrice: currency,
+    weight: z.coerce.number().min(0, 'Weight must be 0 or greater').optional(),
+    height: z.coerce.number().min(0, 'Height must be 0 or greater').optional(),
+    width: z.coerce.number().min(0, 'Width must be 0 or greater').optional(),
+    depth: z.coerce.number().min(0, 'Depth must be 0 or greater').optional(),
     priceNeedsReview: z.boolean().optional(),
     lastCostPriceUpdate: z.date().optional().nullable(),
     availability: z.number().int().min(-1, 'Availability must be -1 or greater').optional(),

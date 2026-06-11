@@ -5,9 +5,11 @@
 //   return <>Latest Products</>;
 // };
 
-import { getLatestProducts, getFeaturedProducts } from "@/lib/actions/product.actions";
+import { getLatestProducts } from "@/lib/actions/product.actions";
+import { getDealSettings } from "@/lib/actions/settings.actions";
+import { getBanners } from "@/lib/banners";
 import ProductList from "@/components/shared/product/product-list";
-import { ProductCarousel } from "@/components/shared/product/product-carousel";
+import { BannerCarousel } from "@/components/shared/banner-carousel";
 import ViewAllProductsButton from "@/components/view-all-products-button";
 import IconBoxes from "@/components/icon-boxes";
 import DealCountdown from "@/components/deal-countdown";
@@ -17,12 +19,16 @@ export const revalidate = 0;
 
 const HomePage = async () => {
 
-    const latestProducts = await getLatestProducts();
-    const featuredProducts = await getFeaturedProducts();
+    const [latestProducts, dealSettings] = await Promise.all([
+        getLatestProducts(),
+        getDealSettings(),
+    ]);
+
+    const banners = getBanners();
 
     return <>
 
-        {featuredProducts.length > 0 && <ProductCarousel data={featuredProducts} />}
+        <BannerCarousel banners={banners} />
 
         <ProductList 
             data={latestProducts} 
@@ -30,7 +36,13 @@ const HomePage = async () => {
             limit={4}
         />
         <ViewAllProductsButton />
-        <DealCountdown />
+        <DealCountdown 
+            isActive={dealSettings.isActive}
+            targetDate={dealSettings.targetDate}
+            title={dealSettings.title}
+            description={dealSettings.description}
+            image={dealSettings.image}
+        />
         <IconBoxes />
     </> 
 };

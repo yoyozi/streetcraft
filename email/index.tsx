@@ -1,41 +1,59 @@
 // email/index.tsx
-import { Resend } from "resend";
-import { SENDER_EMAIL, APP_NAME } from "@/lib/constants";
+import nodemailer from 'nodemailer';
+import { APP_NAME } from "@/lib/constants";
 // because we are not in the app folder we need to get the .env via the dotenv package
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 
-let resendInstance: Resend | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-function getResendInstance() {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+function getTransporter() {
+  const SMTP2GO_USERNAME = process.env.SMTP2GO_USERNAME;
+  const SMTP2GO_PASSWORD = process.env.SMTP2GO_PASSWORD;
+  const SMTP2GO_EMAIL = process.env.SMTP2GO_EMAIL;
+  const SMTP2GO_HOST = process.env.SMTP2GO_HOST || 'mail.smtp2go.com';
+  const SMTP2GO_PORT = parseInt(process.env.SMTP2GO_PORT || '2525');
   
-  if (!RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not defined in environment variables');
+  if (!SMTP2GO_USERNAME || !SMTP2GO_PASSWORD) {
+    throw new Error('SMTP2GO_USERNAME and SMTP2GO_PASSWORD must be defined in environment variables');
   }
   
-  if (!resendInstance) {
-    resendInstance = new Resend(RESEND_API_KEY as string);
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: SMTP2GO_HOST,
+      port: SMTP2GO_PORT,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: SMTP2GO_USERNAME,
+        pass: SMTP2GO_PASSWORD,
+      },
+    });
   }
   
-  return resendInstance;
+  return transporter;
+}
+
+// Helper function to get the sender email
+function getSenderEmail() {
+  return process.env.SMTP2GO_EMAIL || process.env.SENDER_EMAIL || 'noreply@streetcraft.co.za';
 }
 
 interface EmailOptions {
   to: string;
   subject: string;
-  react: React.ReactElement;
-  // Optional: Add other Resend options like cc, bcc, etc.
+  html: string;
+  // Optional: Add other options like cc, bcc, etc.
 }
 
-export const SendEmail = async ({ to, subject, react }: EmailOptions) => {
+export const SendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
-    await getResendInstance().emails.send({
-      from: `${APP_NAME} <${SENDER_EMAIL}>`,
+    const senderEmail = getSenderEmail();
+    await getTransporter().sendMail({
+      from: `${APP_NAME} <${senderEmail}>`,
       to,
       subject,
-      react,
+      html,
     });
-    // console.log(`Email sent successfully to ${to}`);
+    console.log(`Email sent successfully to ${to}`);
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error);
     throw new Error(`Email sending failed: ${error}`);

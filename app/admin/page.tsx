@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import { getOrderSummary } from "@/lib/actions/order.actions";
+import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BadgeDollarSign, Barcode, CreditCard, User } from "lucide-react";
+import { BadgeDollarSign, Barcode, CreditCard, User, Users } from "lucide-react";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/utils";
 import { Table, TableHeader, TableRow, TableBody, TableCell, TableHead } from "@/components/ui/table";
 import Link from "next/link";
@@ -18,11 +19,12 @@ const AdminOverviewPage = async() => {
     await verifyAdmin();
 
     const summary = await getOrderSummary();
+    const crafterCount = await prisma.crafter.count();
 
   return (
     <div className="space-y-2">
         <h1 className="h2-bold">Admin dashboard</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
 
             <Card>
                 <CardHeader className='flex.flex-row items-center justify-between space-y-0 pb-2'>
@@ -57,6 +59,21 @@ const AdminOverviewPage = async() => {
                     <div className="text-2xl font-bold">
                         {formatNumber(summary.usersCount) || 0}
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-blue-50">
+                <CardHeader className='flex.flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium'>Crafters</CardTitle>
+                    <Users />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">
+                        {formatNumber(crafterCount) || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Registered crafters
+                    </p>
                 </CardContent>
             </Card>
 

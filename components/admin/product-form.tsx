@@ -26,6 +26,7 @@ import { getAllCraftersForDrop } from '@/lib/actions/product.actions';
   import { Textarea } from '@/components/ui/textarea';
   import { Button } from '@/components/ui/button';
   import { UploadButton } from '@/lib/uploadthing';
+
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -51,7 +52,7 @@ import {
   }) => {
     const router = useRouter();
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-    const [crafters, setCrafters] = useState<{ id: string; name: string }[]>([]);
+    const [crafters, setCrafters] = useState<{ id: string; name: string; category?: string | null }[]>([]);
 
   // Determine mode based on the provided type prop
   const isUpdate = type === 'Update';
@@ -75,7 +76,7 @@ import {
   // Fetch categories and crafters on component mount
   useEffect(() => {
     async function fetchData() {
-      const [categoriesResult, craftersResult] = await Promise.all([
+      let [categoriesResult, craftersResult] = await Promise.all([
         getAllCategories({ isActive: true }),
         getAllCraftersForDrop()
       ]);
@@ -85,6 +86,20 @@ import {
       }
       
       if (craftersResult) {
+        // Ensure current product's crafter is in the list even if inactive
+        if (type === 'Update' && product?.crafter?.id) {
+          const currentCrafter = product.crafter;
+          const alreadyInList = craftersResult.some((c: { id: string }) => c.id === currentCrafter.id);
+          if (!alreadyInList) {
+            craftersResult = [{ id: currentCrafter.id, name: currentCrafter.name }, ...craftersResult];
+          }
+          // Auto-fill category from crafter if product category is empty/Uncategorized
+          const matched = craftersResult.find((c: { id: string }) => c.id === currentCrafter.id);
+          const currentCategory = form.getValues('category');
+          if (matched?.category && (!currentCategory || currentCategory === 'Uncategorized')) {
+            form.setValue('category', matched.category);
+          }
+        }
         setCrafters(craftersResult);
       }
     }
@@ -144,8 +159,6 @@ import {
 
     // Listens to the actions by user on the page should they check a box etc
     const images = form.watch('images');
-    const isFeatured = form.watch('isFeatured');
-    const banner = form.watch('banner');
 
     return (
         <Form {...form}>
@@ -226,7 +239,17 @@ import {
               }) => (
                 <FormItem className='w-full'>
                   <FormLabel>Crafter</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? null : value)} value={field.value || 'unassigned'}>
+                  <Select onValueChange={(value) => {
+                    field.onChange(value === 'unassigned' ? null : value);
+                    // Auto-default category from crafter if product category is empty
+                    if (value !== 'unassigned') {
+                      const selected = crafters.find(c => c.id === value);
+                      const currentCategory = form.getValues('category');
+                      if (selected?.category && (!currentCategory || currentCategory === 'Uncategorized')) {
+                        form.setValue('category', selected.category);
+                      }
+                    }
+                  }} value={field.value || 'unassigned'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder='Select a crafter (optional)' />
@@ -295,12 +318,12 @@ import {
                 >;
               }) => (
                 <FormItem className='w-full'>
-                  <FormLabel>Price</FormLabel>
+                  <FormLabel>Retail Price</FormLabel>
                   <FormControl>
                     <Input 
                       type='number'
                       step='0.01'
-                      placeholder='Enter product price' 
+                      placeholder='Enter retail price' 
                       {...field}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
@@ -349,11 +372,97 @@ import {
                 >;
               }) => (
                 <FormItem className='w-full'>
-                  <FormLabel>Availability (Stock)</FormLabel>
+                  <FormLabel>Availability (days to make)</FormLabel>
                   <FormControl>
                     <Input 
                       type='number'
-                      placeholder='Enter stock quantity (-1 for unlimited)' 
+                      placeholder='-1=N/A, 0=in stock, 1-7=days' 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className='flex flex-col gap-5 md:flex-row'>
+            {/* Weight */}
+            <FormField
+              control={form.control}
+              name='weight'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel>Mass (kg)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type='number'
+                      step='0.01'
+                      placeholder='Weight in kg' 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Height */}
+            <FormField
+              control={form.control}
+              name='height'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel>Height (cm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type='number'
+                      step='0.1'
+                      placeholder='Height in cm' 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Width */}
+            <FormField
+              control={form.control}
+              name='width'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel>Width (cm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type='number'
+                      step='0.1'
+                      placeholder='Width in cm' 
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Depth */}
+            <FormField
+              control={form.control}
+              name='depth'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel>Depth (cm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type='number'
+                      step='0.1'
+                      placeholder='Depth in cm' 
                       {...field}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
@@ -453,12 +562,16 @@ import {
                           <UploadButton
                             endpoint='imageUploader'
                             onClientUploadComplete={(res: { url: string }[]) => {
+                              const imageUrl = res[0].url;
                               const currentImages = form.getValues('images') || [];
-                              const newImages = [...currentImages, res[0].url];
+                              const newImages = [...currentImages, imageUrl];
                               form.setValue('images', newImages, { shouldValidate: true, shouldDirty: true });
-                              console.log('Image uploaded:', res[0].url);
+                              console.log('Image uploaded:', imageUrl);
                               console.log('All images:', newImages);
                               toast.success('Image uploaded successfully');
+                              
+                              // Optimize in background and update form with new URL
+                              optimizeImageInBackground(imageUrl, newImages.length - 1);
                             }}
                             onUploadError={(error: Error) => {
                               toast.error(`ERROR! ${error.message}`);
@@ -482,21 +595,6 @@ import {
               <CardContent className='space-y-2 mt-2  '>
                 <FormField
                   control={form.control}
-                  name='isFeatured'
-                  render={({ field }) => (
-                    <FormItem className='space-x-2 items-center'>
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormLabel>Is Featured?</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
                   name='isFirstPage'
                   render={({ field }) => (
                     <FormItem className='space-x-2 items-center'>
@@ -507,6 +605,26 @@ import {
                         />
                       </FormControl>
                       <FormLabel>Show on First Page?</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name='isUnique'
+                  render={({ field }) => (
+                    <FormItem className='space-x-2 items-center'>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) {
+                              form.setValue('availability', 1);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel>Unique Item (one-of-a-kind, can only be sold once)</FormLabel>
                     </FormItem>
                   )}
                 />
@@ -525,35 +643,39 @@ import {
                     </FormItem>
                   )}
                 />
-                {isFeatured && banner && (
-                  <div className='space-y-2'>
-                    <Image
-                      src={banner}
-                      alt='banner image'
-                      className=' w-full object-cover object-center rounded-sm'
-                      width={1920}
-                      height={680}
-                    />
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => form.setValue('banner', null)}
-                    >
-                      Remove Banner
-                    </Button>
-                  </div>
-                )}
-                {isFeatured && !banner && (
-                  <UploadButton
-                    endpoint='imageUploader'
-                    onClientUploadComplete={(res: { url: string }[]) => {
-                      form.setValue('banner', res[0].url);
-                    }}
-                    onUploadError={(error: Error) => {
-                      toast.error(`Upload failed: ${error.message}`);
-                    }}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name='isActive'
+                  render={({ field }) => (
+                    <FormItem className='space-x-2 items-center'>
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              const values = form.getValues();
+                              const missing: string[] = [];
+                              if (!values.costPrice || Number(values.costPrice) <= 0) missing.push('Cost Price');
+                              if (!values.price || Number(values.price) <= 0) missing.push('Retail Price');
+                              if (!values.weight || Number(values.weight) <= 0) missing.push('Mass');
+                              if (!values.height || Number(values.height) <= 0) missing.push('Height');
+                              if (!values.width || Number(values.width) <= 0) missing.push('Width');
+                              if (!values.depth || Number(values.depth) <= 0) missing.push('Depth');
+                              if (values.availability === undefined || values.availability === null) missing.push('Availability');
+                              if (!values.crafter) missing.push('Crafter');
+                              if (missing.length > 0) {
+                                toast.error(`Cannot activate: fill in ${missing.join(', ')} first`);
+                                return;
+                              }
+                            }
+                            field.onChange(checked);
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel>Active (visible on public site)</FormLabel>
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
           </div>
@@ -600,6 +722,30 @@ import {
         </form>
       </Form>
     );
+
+  // Background optimization function
+  const optimizeImageInBackground = async (imageUrl: string, imageIndex: number) => {
+    try {
+      const response = await fetch('/api/optimize-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl }),
+      });
+      
+      const result = await response.json();
+      if (result.success && result.newUrl) {
+        // Update the form with the new optimized URL
+        const currentImages = form.getValues('images') || [];
+        if (currentImages[imageIndex] === result.oldUrl) {
+          currentImages[imageIndex] = result.newUrl;
+          form.setValue('images', currentImages, { shouldValidate: true, shouldDirty: true });
+          console.log('Image optimized and URL updated:', result);
+        }
+      }
+    } catch (error) {
+      console.warn('Background optimization failed:', error);
+    }
+  };
 }
 
 export default ProductForm;

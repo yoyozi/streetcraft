@@ -14,7 +14,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from '@/components/ui/card';
 
 
-const CartTable = ({ cart }: { cart?: Cart }) => {
+const CartTable = ({ cart, uniqueProductIds = [] }: { cart?: Cart; uniqueProductIds?: string[] }) => {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
@@ -73,6 +73,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                                                 ) }
                                         </Button>
                                         <span className="min-w-8 text-center">{ item.qty }</span>
+                                        {!uniqueProductIds.includes(item.productId) && (
                                         <Button disabled={isPending} variant="outline" type='button' 
                                             onClick={() => startTransition(async() => {
                                                 // Ensure price is a string
@@ -95,6 +96,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                                                     <Plus className="h-4 w-4" />
                                                 ) }
                                         </Button>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right">

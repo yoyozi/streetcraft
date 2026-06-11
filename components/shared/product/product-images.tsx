@@ -15,6 +15,7 @@ const ProductImages = ({ images }: { images: string[] }) => {
                 width={1000}
                 height={1000}
                 className='min-h-[300px] object-cover object-center '
+                unoptimized
             />
         <div className='flex'>
             {images.map((image, index) => (
@@ -26,7 +27,7 @@ const ProductImages = ({ images }: { images: string[] }) => {
                     )}
                     onClick={() => setCurrent(index)}
                 >
-                <Image src={image} alt={'image'} width={100} height={100} />
+                <Image src={image} alt={'image'} width={100} height={100} unoptimized />
             </div>
             ))}
         </div>

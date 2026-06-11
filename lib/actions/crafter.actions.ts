@@ -2,37 +2,78 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { createCrafterSchema, updateCrafterSchema } from '@/lib/validations/crafter';
 import { checkAdminAuth } from './auth-actions';
-import { z } from 'zod';
+import { UTApi } from 'uploadthing/server';
 
 // CREATE CRAFTER (Admin only)
-export async function createCrafter(data: z.infer<typeof createCrafterSchema> & { userId: string }) {
+// Admin manually creates a crafter — auto-creates a linked User record
+export async function createCrafter(data: {
+  name: string;
+  businessName?: string;
+  location: string;
+  mobile: string;
+  category?: string;
+}) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, error: authCheck.error };
     }
 
-    const validation = createCrafterSchema.safeParse(data);
-    if (!validation.success) {
-      return { 
-        success: false, 
-        error: validation.error.errors[0]?.message || 'Validation failed' 
-      };
+    const { name, businessName, location, mobile, category } = data;
+
+    if (!name || !location || !mobile) {
+      return { success: false, error: 'Name, location and mobile are required' };
     }
 
-    const crafter = await prisma.crafter.create({
-      data: {
-        ...validation.data,
-        userId: data.userId,
-        isActive: true,
-      },
+    // Normalize mobile
+    let normalized = mobile.replace(/[\s\-()]/g, '');
+    if (normalized.startsWith('+')) normalized = normalized.slice(1);
+    if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
+
+    // Check if mobile already exists as a crafter
+    const existingCrafter = await prisma.crafter.findFirst({
+      where: { mobile: normalized },
+    });
+    if (existingCrafter) {
+      return { success: false, error: 'A crafter with this mobile number already exists' };
+    }
+
+    // Create User + Crafter in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: `${normalized}@phone.local`,
+          role: 'craft',
+          isActive: true,
+        },
+      });
+
+      const crafter = await tx.crafter.create({
+        data: {
+          businessName: businessName?.trim() || name.trim(),
+          location: location.trim(),
+          mobile: normalized,
+          userId: user.id,
+          status: 'APPROVED',
+          isActive: true,
+          approvedAt: new Date(),
+        },
+      });
+
+      // Link crafterId back to user
+      await tx.user.update({
+        where: { id: user.id },
+        data: { crafterId: crafter.id },
+      });
+
+      return crafter;
     });
 
     revalidatePath('/admin/crafters');
 
-    return { success: true, data: crafter };
+    return { success: true, data: result };
   } catch (error) {
     console.error('Create crafter error:', error);
     return { success: false, error: `Failed to create crafter: ${error}` };
@@ -42,7 +83,14 @@ export async function createCrafter(data: z.infer<typeof createCrafterSchema> & 
 // UPDATE CRAFTER (Admin only)
 export async function updateCrafter(
   id: string,
-  data: z.infer<typeof updateCrafterSchema>
+  data: {
+    name?: string;
+    businessName?: string;
+    location?: string;
+    mobile?: string;
+    category?: string;
+    description?: string;
+  }
 ) {
   try {
     const authCheck = await checkAdminAuth();
@@ -50,15 +98,37 @@ export async function updateCrafter(
       return { success: false, error: authCheck.error };
     }
 
-    const validation = updateCrafterSchema.safeParse(data);
-    if (!validation.success) {
-      return { success: false, error: validation.error.errors[0]?.message || 'Validation failed' };
+    const updateData: Record<string, unknown> = {};
+
+    if (data.businessName !== undefined) updateData.businessName = data.businessName.trim();
+    if (data.name && !data.businessName) updateData.businessName = data.name.trim();
+    if (data.location) updateData.location = data.location.trim();
+    if (data.mobile) {
+      let normalized = data.mobile.replace(/[\s\-()]/g, '');
+      if (normalized.startsWith('+')) normalized = normalized.slice(1);
+      if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
+      updateData.mobile = normalized;
     }
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.description !== undefined) updateData.description = data.description.trim();
 
     const crafter = await prisma.crafter.update({
       where: { id },
-      data: validation.data,
+      data: updateData,
     });
+
+    // Also update the linked User record
+    const userUpdate: Record<string, unknown> = {};
+    if (data.name) userUpdate.name = data.name.trim();
+    if (updateData.mobile) {
+      userUpdate.email = `${updateData.mobile}@phone.local`;
+    }
+    if (Object.keys(userUpdate).length > 0) {
+      await prisma.user.update({
+        where: { id: crafter.userId },
+        data: userUpdate,
+      });
+    }
 
     revalidatePath('/admin/crafters');
 
@@ -75,6 +145,25 @@ export async function toggleCrafterStatus(id: string, isActive: boolean) {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return { success: false, error: authCheck.error };
+    }
+
+    // Validate required fields before activating
+    if (isActive) {
+      const crafter = await prisma.crafter.findUnique({ where: { id } });
+      if (!crafter) return { success: false, error: 'Crafter not found' };
+
+      // Must be approved if created via registration link
+      if (crafter.status === 'PENDING') {
+        return { success: false, error: 'Cannot activate: registration must be approved first' };
+      }
+
+      const missing: string[] = [];
+      if (!crafter.category) missing.push('Category');
+      if (!crafter.location) missing.push('Location');
+      if (!crafter.mobile) missing.push('Mobile');
+      if (missing.length > 0) {
+        return { success: false, error: `Cannot activate: fill in ${missing.join(', ')} first` };
+      }
     }
 
     const crafter = await prisma.crafter.update({
@@ -169,7 +258,7 @@ export async function getPendingCrafters() {
 
     const crafters = await prisma.crafter.findMany({
       where: { status: 'PENDING' },
-      include: { user: { select: { name: true, phoneNumber: true } } },
+      include: { user: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -196,17 +285,23 @@ export async function approveCrafter(id: string) {
       },
     });
 
-    // Update user role to 'craft'
+    // Generate password setup token
+    const { randomBytes } = await import('crypto');
+    const token = randomBytes(16).toString('hex');
+
+    // Update user role to 'craft' and set password setup token
     await prisma.user.update({
       where: { id: crafter.userId },
-      data: { role: 'craft' },
+      data: { role: 'craft', passwordSetupToken: token },
     });
 
-    // Send approval SMS
+    // Send approval SMS with password setup link
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const setupUrl = `${baseUrl}/set-password?token=${token}`;
     const { sendSms } = await import('@/lib/clickatell');
     await sendSms(
       crafter.mobile,
-      `Great news! Your StreetCraft application has been approved. We'll be in touch to arrange a meetup. Welcome aboard!`
+      `Great news ${crafter.businessName}! Your StreetCraft application has been approved. Set your password to login: ${setupUrl}`
     );
 
     revalidatePath('/admin/crafters');
@@ -224,11 +319,32 @@ export async function rejectCrafter(id: string, reason: string) {
       return { success: false, error: authCheck.error };
     }
 
-    const crafter = await prisma.crafter.update({
+    const crafter = await prisma.crafter.findUnique({
+      where: { id },
+    });
+
+    if (!crafter) {
+      return { success: false, error: 'Crafter not found' };
+    }
+
+    // Delete work sample images from UploadThing
+    if (crafter.workSamples && crafter.workSamples.length > 0) {
+      const utapi = new UTApi();
+      try {
+        await utapi.deleteFiles(crafter.workSamples);
+      } catch (error) {
+        console.error('Failed to delete work sample images from UploadThing:', error);
+        // Continue with rejection even if image deletion fails
+      }
+    }
+
+    // Update crafter status
+    await prisma.crafter.update({
       where: { id },
       data: {
         status: 'REJECTED',
         rejectedReason: reason,
+        workSamples: [], // Clear work samples array
       },
     });
 
@@ -236,13 +352,76 @@ export async function rejectCrafter(id: string, reason: string) {
     const { sendSms } = await import('@/lib/clickatell');
     await sendSms(
       crafter.mobile,
-      `Hi, unfortunately your StreetCraft application was not successful at this time. Thank you for your interest.`
+      `Hi ${crafter.businessName}, unfortunately we already have these products registered on StreetCraft. Thank you for your interest.`
     );
 
     revalidatePath('/admin/crafters');
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to reject crafter' };
+  }
+}
+
+// GET PRODUCT COUNTS FOR WORK SAMPLE IMAGES (Admin only)
+export async function getProductCountsByImages(imageUrls: string[]) {
+  try {
+    const counts: Record<string, number> = {};
+    for (const url of imageUrls) {
+      const count = await prisma.product.count({
+        where: { images: { has: url } },
+      });
+      counts[url] = count;
+    }
+    return { success: true, data: counts };
+  } catch {
+    return { success: false, data: {} };
+  }
+}
+
+// CREATE DRAFT PRODUCT FROM WORK SAMPLE (Admin only)
+export async function createProductFromSample(crafterId: string, imageUrl: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const crafter = await prisma.crafter.findUnique({
+      where: { id: crafterId },
+    });
+
+    if (!crafter) {
+      return { success: false, error: 'Crafter not found' };
+    }
+
+    if (crafter.status === 'PENDING') {
+      return { success: false, error: 'Crafter registration must be approved before creating products' };
+    }
+
+    if (!crafter.isActive) {
+      return { success: false, error: 'Crafter must be active before creating products' };
+    }
+
+    const slug = `draft-${crafterId.slice(-6)}-${Date.now()}`;
+
+    const product = await prisma.product.create({
+      data: {
+        name: `Draft - ${crafter.businessName}`,
+        slug,
+        category: crafter.category || 'Uncategorized',
+        images: [imageUrl],
+        description: '',
+        price: 0,
+        isActive: false,
+        crafterId,
+      },
+    });
+
+    revalidatePath('/admin/crafters');
+    revalidatePath('/admin/products');
+    return { success: true, productId: product.id };
+  } catch {
+    return { success: false, error: 'Failed to create product from sample' };
   }
 }
 

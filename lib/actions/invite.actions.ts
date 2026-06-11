@@ -173,13 +173,14 @@ export async function deleteInvite(id: string) {
 export async function registerCrafterByPhone(data: {
   inviteCode: string;
   name: string;
+  businessName?: string;
   mobile: string;
   location: string;
   description: string;
   workSamples: string[];
 }) {
   try {
-    const { inviteCode, name, mobile, location, description, workSamples } = data;
+    const { inviteCode, name, businessName, mobile, location, description, workSamples } = data;
 
     if (!inviteCode || !name || name.trim().length < 2) {
       return { success: false, error: 'Name is required' };
@@ -207,13 +208,13 @@ export async function registerCrafterByPhone(data: {
       return { success: false, error: 'This invite has already been used' };
     }
 
-    // Check if phone already registered
-    const existingUser = await prisma.user.findFirst({
-      where: { phoneNumber: mobile },
+    // Check if mobile already registered as a crafter
+    const existingCrafter = await prisma.crafter.findFirst({
+      where: { mobile },
     });
 
-    if (existingUser) {
-      return { success: false, error: 'This phone number is already registered' };
+    if (existingCrafter) {
+      return { success: false, error: 'This mobile number is already registered' };
     }
 
     // Create user + crafter in a transaction
@@ -222,15 +223,13 @@ export async function registerCrafterByPhone(data: {
         data: {
           name: name.trim(),
           email: `${mobile}@phone.local`,
-          role: 'user',
-          phoneNumber: mobile,
-          phoneVerified: true,
+          role: 'craft',
         },
       });
 
-      await tx.crafter.create({
+      const crafter = await tx.crafter.create({
         data: {
-          businessName: name.trim(),
+          businessName: businessName?.trim() || name.trim(),
           description: description.trim(),
           location: location.trim(),
           mobile,
@@ -241,6 +240,12 @@ export async function registerCrafterByPhone(data: {
         },
       });
 
+      // Link crafterId back to user
+      await tx.user.update({
+        where: { id: user.id },
+        data: { crafterId: crafter.id },
+      });
+
       await tx.crafterInvite.update({
         where: { id: invite.id },
         data: {
@@ -249,9 +254,6 @@ export async function registerCrafterByPhone(data: {
         },
       });
     });
-
-    revalidatePath('/admin/crafters');
-    revalidatePath('/admin/crafters/invite');
 
     return { success: true };
   } catch (error) {

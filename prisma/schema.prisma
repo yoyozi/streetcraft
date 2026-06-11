@@ -74,10 +74,12 @@ model User {
   password             String?
   image                String?
   role                 String    @default("user")
-  phoneNumber          String?   @unique
-  phoneVerified        Boolean   @default(false)
   isActive             Boolean   @default(true)
   requirePasswordReset Boolean   @default(false)
+  passwordSetupToken   String?   @unique
+  phoneNumber          String?   @unique
+  resetToken           String?   @unique
+  resetTokenExpires    DateTime?
   address              Json?
   paymentMethod        String?
   crafterId            String?
@@ -96,6 +98,7 @@ model User {
   @@index([role])
   @@index([isActive])
   @@index([crafterId])
+  @@index([phoneNumber])
 }
 
 enum CrafterStatus {
@@ -115,6 +118,7 @@ model Crafter {
   description      String?
   location         String
   mobile           String
+  category         String?
   whatsappNumber   String?
   city             String?
   province         String?
@@ -130,6 +134,9 @@ model Crafter {
 
   // Relations
   products Product[]
+  imageUploads ProductImageUpload[]
+  payments CrafterPayment[]
+  payouts CrafterPayout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,11 +201,14 @@ model Product {
   priceNeedsReview    Boolean   @default(false)
   lastCostPriceUpdate DateTime?
   weight              Float     @default(0)
+  height              Float     @default(0)
+  width               Float     @default(0)
+  depth               Float     @default(0)
   availability        Int       @default(3)
   rating              Float     @default(0)
   numReviews          Int       @default(0)
-  isFeatured          Boolean   @default(false)
   isFirstPage         Boolean   @default(false)
+  isUnique            Boolean   @default(false)
   isActive            Boolean   @default(true)
   banner              String?
   tags                String[]
@@ -213,10 +223,33 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([category])
-  @@index([isFeatured])
   @@index([isFirstPage])
   @@index([crafterId])
   @@index([isActive])
+}
+
+enum ProductImageUploadStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ProductImageUpload {
+  id          String                    @id @default(cuid())
+  crafterId   String
+  crafter     Crafter                   @relation(fields: [crafterId], references: [id], onDelete: Cascade)
+  imageUrl    String
+  status      ProductImageUploadStatus  @default(PENDING)
+  rejectionReason String?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([crafterId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Cart {
@@ -320,4 +353,68 @@ model Review {
   @@index([userId])
   @@index([rating])
   @@index([createdAt(sort: Desc)])
+}
+
+// ============================================================
+// Crafter Payment System
+// ============================================================
+
+model CrafterPayment {
+  id           String   @id @default(cuid())
+  crafterId    String
+  crafter      Crafter  @relation(fields: [crafterId], references: [id], onDelete: Cascade)
+  orderId      String
+  orderItemId  String
+  amount       Float
+  status       String   @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
+  paymentDate  DateTime?
+  paymentMethod String?
+  reference    String?
+  notes        String?
+
+  payoutId     String?
+  payout       CrafterPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([crafterId])
+  @@index([status])
+  @@index([orderId])
+  @@index([payoutId])
+}
+
+model CrafterPayout {
+  id            String   @id @default(cuid())
+  crafterId     String
+  crafter       Crafter  @relation(fields: [crafterId], references: [id], onDelete: Cascade)
+  totalAmount   Float
+  status        String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, CANCELLED
+  paymentMethod String
+  processedBy   String?
+  processedAt   DateTime?
+  reference     String?
+  attachment    String?
+  notes         String?
+
+  payments      CrafterPayment[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([crafterId])
+  @@index([status])
+}
+
+// ============================================================
+// Site Settings (key-value config)
+// ============================================================
+
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

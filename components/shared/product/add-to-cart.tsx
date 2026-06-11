@@ -6,38 +6,31 @@ import { Plus, Minus, Loader2 } from "lucide-react"
 import { CartItem, Cart } from "@/types"
 import { toast } from "sonner"
 import { addItemToCart, removeItemFromCart, CartActionResponse } from "@/lib/actions/cart.actions"
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 
 interface AddToCartProps {
     cart?: Cart
     item: CartItem
+    isUnique?: boolean
+    isSold?: boolean
     onCartUpdate?: () => void
 }
 
-    const AddToCart = ({ cart, item, onCartUpdate }: AddToCartProps) => {
+    const AddToCart = ({ cart, item, isUnique, isSold, onCartUpdate }: AddToCartProps) => {
     const router = useRouter()
-    
-    // useTransition for pending state
     const [isPending, startTransition] = useTransition()
+    // Local flag to immediately lock unique items after first add
+    const [uniqueAdded, setUniqueAdded] = useState(false)
 
     const handleAddToCart = () => {
-        console.log('=== handleAddToCart START ===');
-        console.log('Item being passed:', item);
-        
         startTransition(async () => {
         try {
-            // Debug: Log the item being sent
-            console.log('Sending item to cart:', item);
-            console.log('About to call addItemToCart...');
-            
             const res: CartActionResponse = await addItemToCart(item)
-            
-            console.log('Received response from addItemToCart:', res);
-            console.log('Response type:', typeof res);
-            console.log('Response keys:', Object.keys(res));
 
             if (res && res.success) {
-            // Refresh cart data to update UI
+            // Immediately lock the button for unique items
+            if (isUnique) setUniqueAdded(true)
+
             if (onCartUpdate) {
                 await onCartUpdate();
             }
@@ -47,7 +40,6 @@ interface AddToCartProps {
                 action: { label: "Go to cart", onClick: () => router.push("/cart") },
             })
             } else {
-            console.error('Cart action failed:', res);
             toast.error(res?.message || 'Unknown error occurred')
             }
         } catch (err) {
@@ -63,7 +55,8 @@ interface AddToCartProps {
             const res: CartActionResponse = await removeItemFromCart(item.productId)
 
             if (res && res.success) {
-            // Refresh cart data to update UI
+            if (isUnique) setUniqueAdded(false)
+
             if (onCartUpdate) {
                 await onCartUpdate();
             }
@@ -80,6 +73,28 @@ interface AddToCartProps {
     }
 
     const existItem = cart?.items.find(x => x.productId === item.productId)
+    const inCart = existItem || uniqueAdded
+
+    if (isSold) {
+        return (
+            <Button variant="destructive" type="button" disabled className="w-full">
+                Sold
+            </Button>
+        )
+    }
+
+    if (inCart && isUnique) {
+        return (
+            <div className="flex items-center gap-2">
+                <Button variant="outline" type="button" disabled className="flex-1">
+                    In Cart
+                </Button>
+                <Button variant="outline" type="button" onClick={handleRemoveFromCart} disabled={isPending}>
+                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Minus className="h-4 w-4" />}
+                </Button>
+            </div>
+        )
+    }
 
     return existItem ? (
         <div className="flex items-center justify-center gap-2">

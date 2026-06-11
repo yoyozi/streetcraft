@@ -118,6 +118,17 @@ export async function createOrder() {
                 });
             }
 
+            // Mark unique items as sold
+            for (const item of cart.items as CartItem[]) {
+                const product = await tx.product.findUnique({ where: { id: item.productId } });
+                if (product?.isUnique) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { availability: 0, isActive: false, isFirstPage: false },
+                    });
+                }
+            }
+
             // Clear the cart items and reset prices
             await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
             await tx.cart.update({
@@ -522,7 +533,16 @@ export async function updateOrderToPaid({
         paymentResult: paymentResult as any,
       },
     });
-  
+
+    // Create crafter payments for this order
+    try {
+      const { createCrafterPaymentsForOrder } = await import('./crafter-payment.actions');
+      await createCrafterPaymentsForOrder(orderId);
+    } catch (error) {
+      console.error('Failed to create crafter payments:', error);
+      // Don't throw - we don't want payment creation to break the order payment flow
+    }
+
     // Get the updated order with items and user for email
     const updatedOrder = await prisma.order.findUnique({
       where: { id: orderId },

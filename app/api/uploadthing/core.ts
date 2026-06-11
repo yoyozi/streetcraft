@@ -11,10 +11,10 @@ export const ourFileRouter = {
       maxFileSize: "4MB",
     },
   })
-    
+
     .middleware(async () => {
       const session = await auth();
-    
+
       if (!session) throw new UploadThingError("Unauthorized");
 
       return { userId: session?.user?.id };
@@ -35,6 +35,26 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ file }) => {
       console.log("[UploadThing] Crafter work sample uploaded:", file.ufsUrl);
+      return { url: file.ufsUrl };
+    }),
+
+  // Crafter product image upload (requires craft role)
+  crafterProductImage: f({
+    image: {
+      maxFileSize: "4MB",
+      maxFileCount: 1,
+    },
+  })
+    .middleware(async () => {
+      const session = await auth();
+
+      if (!session) throw new UploadThingError("Unauthorized");
+      if (session.user?.role !== 'craft') throw new UploadThingError("Only crafters can upload product images");
+
+      return { userId: session?.user?.id };
+    })
+    .onUploadComplete(async ({ file }) => {
+      console.log("[UploadThing] Crafter product image uploaded:", file.ufsUrl);
       return { url: file.ufsUrl };
     }),
 } satisfies FileRouter;
