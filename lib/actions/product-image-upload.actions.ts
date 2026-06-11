@@ -113,6 +113,7 @@ export async function getCrafterUploadStatus(): Promise<{
   remaining: number;
   limit: number;
   pendingCount: number;
+  uploads?: Array<{ id: string; imageUrl: string; status: string; createdAt: string }>;
   error?: string;
 }> {
   try {
@@ -140,12 +141,33 @@ export async function getCrafterUploadStatus(): Promise<{
       },
     });
 
+    // Get recent uploads (last 10)
+    const uploads = await prisma.productImageUpload.findMany({
+      where: {
+        crafterId: crafter.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 10,
+      select: {
+        id: true,
+        imageUrl: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
     return {
       success: true,
       canUpload: uploadCheck.canUpload,
       remaining: uploadCheck.remaining,
       limit: uploadCheck.limit,
       pendingCount,
+      uploads: uploads.map(u => ({
+        ...u,
+        createdAt: u.createdAt.toISOString(),
+      })),
     };
   } catch (error) {
     console.error('Error getting upload status:', error);
@@ -168,7 +190,7 @@ export async function getPendingImageUploads(): Promise<{
 
     const uploads = await prisma.productImageUpload.findMany({
       where: {
-        status: 'PENDING',
+        status: { in: ['PENDING', 'REJECTED'] },
       },
       include: {
         crafter: {
@@ -184,9 +206,16 @@ export async function getPendingImageUploads(): Promise<{
       },
     });
 
+    // Serialize dates
+    const serializedUploads = uploads.map(u => ({
+      ...u,
+      createdAt: u.createdAt.toISOString(),
+      updatedAt: u.updatedAt.toISOString(),
+    }));
+
     return {
       success: true,
-      data: uploads,
+      data: serializedUploads,
     };
   } catch (error) {
     console.error('Error getting pending uploads:', error);
@@ -203,7 +232,63 @@ export async function approveImageUpload(uploadId: string): Promise<ProductImage
       return { success: false, error: 'Unauthorized' };
     }
 
-    const upload = await prisma.productImageUpload.update({
+    // Get the upload with all details
+    const upload = await prisma.productImageUpload.findUnique({
+      where: { id: uploadId },
+      include: {
+        crafter: {
+          include: { category: true },
+        },
+      },
+    });
+
+    if (!upload) {
+      return { success: false, error: 'Upload not found' };
+    }
+
+    // Check if required fields are filled
+    if (!upload.costPrice || !upload.weight || !upload.height || !upload.width || !upload.depth || upload.availability === null) {
+      return { success: false, error: 'Cannot approve: missing required fields (cost, weight, dimensions, availability)' };
+    }
+
+    // Use crafter's category if set, otherwise fail
+    if (!upload.crafter.categoryId) {
+      return { success: false, error: 'Cannot approve: crafter has no category assigned' };
+    }
+
+    // Auto-generate a placeholder product name from crafter's business name
+    // Admin must set a proper name and activate the product on the products page
+    const productName = `${upload.crafter.businessName} - DRAFT`;
+
+    // Create unique slug from name (append short id to avoid collisions)
+    const baseSlug = productName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const slug = `${baseSlug}-${upload.id.slice(-6)}`;
+
+    // Create the Product record using crafter's category
+    const product = await prisma.product.create({
+      data: {
+        name: productName,
+        slug,
+        category: upload.crafter.category?.name || 'Uncategorized', // Use crafter's category name
+        description: upload.description || '',
+        price: upload.costPrice * 1.5, // Default retail price as 1.5x cost (admin can adjust)
+        costPrice: upload.costPrice,
+        weight: upload.weight,
+        height: upload.height,
+        width: upload.width,
+        depth: upload.depth,
+        availability: upload.availability,
+        images: [upload.imageUrl],
+        crafterId: upload.crafterId,
+        isActive: false, // Draft - admin must set name and activate on products page
+      },
+    });
+
+    // Update the upload status to APPROVED
+    const updatedUpload = await prisma.productImageUpload.update({
       where: { id: uploadId },
       data: {
         status: 'APPROVED',
@@ -213,16 +298,17 @@ export async function approveImageUpload(uploadId: string): Promise<ProductImage
     });
 
     revalidatePath('/admin/image-approvals');
+    revalidatePath('/admin/products');
     revalidatePath('/crafter');
 
     return {
       success: true,
-      message: 'Image upload approved',
-      data: upload,
+      message: `Image upload approved and product "${upload.name}" created`,
+      data: { upload: updatedUpload, productId: product.id },
     };
   } catch (error) {
     console.error('Error approving image upload:', error);
-    return { success: false, error: 'Failed to approve upload' };
+    return { success: false, error: 'Failed to approve upload: ' + (error as Error).message };
   }
 }
 

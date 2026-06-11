@@ -109,7 +109,20 @@ export async function updateCrafter(
       if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
       updateData.mobile = normalized;
     }
-    if (data.category !== undefined) updateData.category = data.category;
+    if (data.category !== undefined) {
+      if (data.category && data.category.trim() !== '') {
+        // Find the category by name and connect it
+        const categoryRecord = await prisma.category.findFirst({
+          where: { name: data.category },
+        });
+        if (categoryRecord) {
+          updateData.category = { connect: { id: categoryRecord.id } };
+        }
+      } else {
+        // Disconnect the category if empty
+        updateData.category = { disconnect: true };
+      }
+    }
     if (data.description !== undefined) updateData.description = data.description.trim();
 
     const crafter = await prisma.crafter.update({
@@ -189,6 +202,7 @@ export async function getAllCrafters(filter?: { isActive?: boolean }) {
       include: {
         _count: { select: { products: true } },
         user: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true } },
       },
       orderBy: { businessName: 'asc' },
     });
@@ -196,9 +210,10 @@ export async function getAllCrafters(filter?: { isActive?: boolean }) {
     const craftersWithDetails = crafters.map((crafter) => ({
       _id: crafter.id,
       id: crafter.id,
-      name: crafter.businessName,
+      name: crafter.businessName || crafter.user?.name || 'No name',
       location: crafter.location,
       mobile: crafter.mobile,
+      category: crafter.category?.name || null,
       profileImage: crafter.profileImage,
       isActive: crafter.isActive,
       status: crafter.status,
@@ -225,6 +240,12 @@ export async function getCrafterById(id: string) {
       where: { id },
       include: {
         _count: { select: { products: true } },
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -237,7 +258,9 @@ export async function getCrafterById(id: string) {
       data: {
         ...crafter,
         _id: crafter.id,
-        name: crafter.businessName,
+        personalName: crafter.user?.name || 'No name',
+        name: crafter.businessName, // Map businessName to name for compatibility
+        businessName: crafter.businessName,
         productCount: crafter._count.products,
         createdAt: crafter.createdAt.toISOString(),
         updatedAt: crafter.updatedAt.toISOString(),
@@ -269,7 +292,7 @@ export async function getPendingCrafters() {
 }
 
 // APPROVE CRAFTER (Admin only)
-export async function approveCrafter(id: string) {
+export async function approveCrafter(id: string, categoryId?: string) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
@@ -282,6 +305,7 @@ export async function approveCrafter(id: string) {
         status: 'APPROVED',
         isActive: true,
         approvedAt: new Date(),
+        categoryId: categoryId, // Set the crafter's category
       },
     });
 

@@ -94,7 +94,7 @@ const Menu = async () => {
                                         <Button asChild variant='ghost' className="justify-start">
                                             <Link href='/crafter'>
                                                 <Settings className="mr-2 h-4 w-4" />
-                                                Crafter Dashboard
+                                                Crafter
                                             </Link>
                                         </Button>
                                     </>

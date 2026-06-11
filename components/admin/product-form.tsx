@@ -132,6 +132,13 @@ import {
         toast.error('Missing product id for update');
         return;
       }
+
+      // Block update if the product still has the auto-generated draft name
+      if (!values.name || values.name.trim() === '' || values.name.trim().endsWith('- DRAFT')) {
+        toast.error('Please set a proper product name before saving');
+        return;
+      }
+
       const payload: UpdateValues = {
         ...(values as unknown as Omit<UpdateValues, 'id'>),
         id: resolvedId,
@@ -269,40 +276,7 @@ import {
                 )}
             />
 
-            {/* Category */}
-            <FormField
-              control={form.control}
-              name='category'
-              render={({
-                field,
-              }: {
-                field: ControllerRenderProps<
-                  z.infer<typeof insertProductSchema>,
-                  'category'
-                >;
-              }) => (
-                <FormItem className='w-full'>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select a category' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories
-                        .filter(category => category.name && category.name.trim() !== '')
-                        .map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Category is inherited from the crafter and set automatically */}
 
 
 

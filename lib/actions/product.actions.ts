@@ -89,6 +89,22 @@ export async function getProductBySlug(slug: string) {
 
 
 
+// Find product IDs whose tags match the query case-insensitively / partially.
+// Prisma can't do `contains` on array elements, so use a raw Postgres query.
+async function getProductIdsMatchingTags(query: string): Promise<string[]> {
+  try {
+    const rows = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Product"
+      WHERE EXISTS (
+        SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ${'%' + query + '%'}
+      )
+    `;
+    return rows.map((r) => r.id);
+  } catch {
+    return [];
+  }
+}
+
 // --- Get all products
 export async function getAllProducts({
   query,
@@ -109,9 +125,15 @@ export async function getAllProducts({
   }) {
     const where: any = { isActive: true };
     
-    // Query filter (case-insensitive search)
+    // Query filter (case-insensitive search across name, description, category and tags)
     if (query && query !== 'all') {
-      where.name = { contains: query, mode: 'insensitive' };
+      const tagMatchedIds = await getProductIdsMatchingTags(query);
+      where.OR = [
+        { name: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { category: { contains: query, mode: 'insensitive' } },
+        ...(tagMatchedIds.length > 0 ? [{ id: { in: tagMatchedIds } }] : []),
+      ];
     }
     
     // Category filter
@@ -176,7 +198,13 @@ export async function getAdminProductsGroupedByCrafter({
 
   const where: any = {};
   if (query && query !== 'all') {
-    where.name = { contains: query, mode: 'insensitive' };
+    const tagMatchedIds = await getProductIdsMatchingTags(query);
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } },
+      { category: { contains: query, mode: 'insensitive' } },
+      ...(tagMatchedIds.length > 0 ? [{ id: { in: tagMatchedIds } }] : []),
+    ];
   }
 
   const [allProducts, dataCount] = await Promise.all([
@@ -458,13 +486,13 @@ export async function getProductById(productId: string) {
 export async function getAllCraftersForDrop() {
   const crafters = await prisma.crafter.findMany({
     where: { isActive: true },
-    select: { id: true, businessName: true, category: true },
+    select: { id: true, businessName: true, category: { select: { name: true } } },
   });
     
   return crafters.map((crafter) => ({
     id: crafter.id,
     name: crafter.businessName,
-    category: crafter.category || null,
+    category: crafter.category?.name || null,
   }));
 }
 
@@ -673,13 +701,14 @@ export async function updateProductAvailability(
     
     await prisma.product.update({
       where: { id: productId },
-      data: { availability },
+      data: { availability, ...(availability === 0 ? { isActive: false, priceNeedsReview: true } : {}) },
     });
     
     revalidatePath('/crafter/availability');
     revalidatePath('/crafter/products');
     
-    return { success: true, message: 'Availability updated successfully' };
+    revalidatePath('/admin/products');
+    return { success: true, message: availability === 0 ? 'Set to out of stock — product deactivated and sent for admin review' : 'Availability updated successfully' };
   } catch {
     return { success: false, message: 'Failed to update availability' };
   }
@@ -814,7 +843,13 @@ export async function getAdminProducts({
   const where: any = {};
   
   if (query && query !== 'all') {
-    where.name = { contains: query, mode: 'insensitive' };
+    const tagMatchedIds = await getProductIdsMatchingTags(query);
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } },
+      { category: { contains: query, mode: 'insensitive' } },
+      ...(tagMatchedIds.length > 0 ? [{ id: { in: tagMatchedIds } }] : []),
+    ];
   }
 
   if (crafterId && crafterId !== 'all') {
@@ -896,7 +931,7 @@ export async function toggleProductActive(productId: string): Promise<{ success:
       }
 
       // Check crafter is approved (not pending registration)
-      const crafter = await prisma.crafter.findUnique({ where: { id: product.crafterId } });
+      const crafter = await prisma.crafter.findUnique({ where: { id: product.crafterId! } });
       if (crafter?.status === 'PENDING') {
         return { success: false, message: 'Cannot activate: crafter registration must be approved first' };
       }

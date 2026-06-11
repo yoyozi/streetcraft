@@ -54,7 +54,7 @@ interface CrafterFormProps {
   type: 'Create' | 'Update';
   crafter?: CrafterData;
   onSubmit?: (values: CrafterFormValues) => Promise<void>;
-  formRef?: React.RefObject<HTMLFormElement>;
+  formRef?: React.RefObject<HTMLFormElement | null>;
 }
 
 const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
@@ -81,7 +81,7 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
   const form = useForm<CrafterFormValues>({
     resolver: zodResolver(crafterSchema),
     defaultValues: crafter ? {
-      name: crafter.name,
+      name: crafter.businessName || crafter.name || '',
       businessName: crafter.businessName || '',
       description: crafter.description || '',
       location: crafter.location,
@@ -137,44 +137,14 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
         onSubmit={form.handleSubmit(handleFormSubmit)}
         className='space-y-8'
       >
-        <div className='flex flex-col gap-5 md:flex-row'>
-          <FormField
-            control={form.control}
-            name='name'
-            render={({ field }) => (
-              <FormItem className='w-full'>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder='Enter crafter name' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name='businessName'
-            render={({ field }) => (
-              <FormItem className='w-full'>
-                <FormLabel>Business Name <span className='text-muted-foreground text-xs'>(optional)</span></FormLabel>
-                <FormControl>
-                  <Input placeholder='Leave blank to use name' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
         <FormField
           control={form.control}
           name='description'
           render={({ field }) => (
             <FormItem className='w-full'>
-              <FormLabel>Business Description <span className='text-muted-foreground text-xs'>(from crafter)</span></FormLabel>
+              <FormLabel>Admin Comments</FormLabel>
               <FormControl>
-                <Textarea placeholder='Description of the craft / business' rows={3} {...field} />
+                <Textarea placeholder='Admin notes about this crafter' rows={3} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -189,35 +159,19 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
               <FormItem className='w-full'>
                 <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <Input placeholder='Enter location / suburb' {...field} />
+                  <Input placeholder='Enter location' {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name='mobile'
-            render={({ field }) => (
-              <FormItem className='w-full'>
-                <FormLabel>Mobile Number</FormLabel>
-                <FormControl>
-                  <Input placeholder='e.g. 0821234567' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
             control={form.control}
             name='category'
             render={({ field }) => (
-              <FormItem className='w-full md:w-1/2'>
-                <FormLabel>Category <span className='text-muted-foreground text-xs'>(optional)</span></FormLabel>
+              <FormItem className='w-full'>
+                <FormLabel>Category</FormLabel>
                 <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
                   <FormControl>
                     <SelectTrigger>

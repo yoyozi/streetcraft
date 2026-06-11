@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LayoutDashboard, Wallet } from "lucide-react";
 
 const CrafterNav = () => {
     return (
@@ -10,10 +11,14 @@ const CrafterNav = () => {
             <div className="container mx-auto px-6 py-4">
                 <div className="flex items-center gap-4">
                     <Link href="/crafter">
-                        <Button variant="ghost">Dashboard</Button>
+                        <Button variant="ghost">
+                            <LayoutDashboard className="h-5 w-5" />
+                        </Button>
                     </Link>
                     <Link href="/crafter/payments">
-                        <Button variant="ghost">Payments</Button>
+                        <Button variant="ghost">
+                            <Wallet className="h-5 w-5" />
+                        </Button>
                     </Link>
                 </div>
             </div>

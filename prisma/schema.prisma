@@ -118,7 +118,8 @@ model Crafter {
   description      String?
   location         String
   mobile           String
-  category         String?
+  categoryId       String?
+  category         Category? @relation(fields: [categoryId], references: [id])
   whatsappNumber   String?
   city             String?
   province         String?
@@ -183,6 +184,8 @@ model Category {
   description String
   isActive    Boolean @default(true)
 
+  crafters            Crafter[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -243,6 +246,16 @@ model ProductImageUpload {
   rejectionReason String?
   reviewedBy  String?
   reviewedAt  DateTime?
+  
+  // Product fields for crafter to fill in
+  name        String?
+  costPrice   Float?
+  weight      Float?
+  height      Float?
+  width       Float?
+  depth       Float?
+  availability Int?
+  description String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -8,7 +8,7 @@ export const ourFileRouter = {
   // Define as many FileRoutes as you like, each with a unique routeSlug
   imageUploader: f({
     image: {
-      maxFileSize: "4MB",
+      maxFileSize: "16MB",
     },
   })
 
@@ -26,7 +26,7 @@ export const ourFileRouter = {
   // Public upload for crafter registration work samples (no auth required)
   crafterWorkSample: f({
     image: {
-      maxFileSize: "4MB",
+      maxFileSize: "16MB",
       maxFileCount: 3,
     },
   })
@@ -41,7 +41,7 @@ export const ourFileRouter = {
   // Crafter product image upload (requires craft role)
   crafterProductImage: f({
     image: {
-      maxFileSize: "4MB",
+      maxFileSize: "16MB",
       maxFileCount: 1,
     },
   })

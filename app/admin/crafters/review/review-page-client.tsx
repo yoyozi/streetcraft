@@ -9,6 +9,14 @@ import { approveCrafter, rejectCrafter } from '@/lib/actions/crafter.actions';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import useSWR from 'swr';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PendingCrafter {
   id: string;
@@ -27,10 +35,14 @@ export default function ReviewPageClient({ crafters: initial }: { crafters: Pend
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Record<string, string>>({});
+
+  const { data: categories } = useSWR('/api/categories');
 
   const handleApprove = (id: string) => {
     startTransition(async () => {
-      const result = await approveCrafter(id);
+      const categoryId = selectedCategories[id];
+      const result = await approveCrafter(id, categoryId);
       if (result.success) {
         toast.success('Crafter approved! SMS sent.');
         setCrafters((prev) => prev.filter((c) => c.id !== id));
@@ -174,12 +186,31 @@ export default function ReviewPageClient({ crafters: initial }: { crafters: Pend
                   </div>
                 ) : (
                   <>
-                    <Button
-                      onClick={() => handleApprove(crafter.id)}
-                      disabled={isPending}
-                    >
-                      {isPending ? 'Approving...' : 'Approve'}
-                    </Button>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Select Category:</label>
+                        <Select
+                          value={selectedCategories[crafter.id] || ''}
+                          onValueChange={(value) => setSelectedCategories({...selectedCategories, [crafter.id]: value})}
+                          className="w-48"
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.data?.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        onClick={() => handleApprove(crafter.id)}
+                        disabled={isPending || !selectedCategories[crafter.id]}
+                      >
+                        {isPending ? 'Approving...' : 'Approve'}
+                      </Button>
+                    </div>
                     <Button
                       variant="outline"
                       onClick={() => setRejectId(crafter.id)}

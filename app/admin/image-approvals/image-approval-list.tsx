@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import Image from 'next/image';
+import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageUpload {
@@ -16,6 +18,14 @@ interface ImageUpload {
   status: string;
   rejectionReason: string | null;
   createdAt: string;
+  name?: string;
+  costPrice?: number;
+  weight?: number;
+  height?: number;
+  width?: number;
+  depth?: number;
+  availability?: number;
+  description?: string;
   crafter: {
     id: string;
     businessName: string;
@@ -41,6 +51,20 @@ export default function ImageApprovalList() {
   );
 
   const uploads = data?.data || [];
+  const pendingUploads = uploads.filter((u) => u.status === 'PENDING');
+  const rejectedUploads = uploads.filter((u) => u.status === 'REJECTED');
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this rejected upload permanently?')) return;
+    const res = await fetch(`/api/admin/image-approvals/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) {
+      toast.success('Upload deleted');
+      mutate();
+    } else {
+      toast.error(result.error || 'Failed to delete');
+    }
+  };
 
   if (error) {
     return (
@@ -75,10 +99,64 @@ export default function ImageApprovalList() {
   }
 
   return (
-    <div className='space-y-4'>
-      {uploads.map((upload) => (
-        <ImageApprovalCard key={upload.id} upload={upload} onUpdate={mutate} />
-      ))}
+    <div className='space-y-6'>
+      {/* Rejected items alert */}
+      {rejectedUploads.length > 0 && (
+        <a
+          href='#rejected-uploads'
+          className='flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 hover:bg-red-100'
+        >
+          <AlertCircle className='h-4 w-4' />
+          {rejectedUploads.length} rejected {rejectedUploads.length === 1 ? 'item' : 'items'} below — tap to review or delete.
+        </a>
+      )}
+
+      {/* Pending approvals */}
+      <div className='space-y-4'>
+        {pendingUploads.length === 0 ? (
+          <p className='text-sm text-muted-foreground'>No pending image approvals.</p>
+        ) : (
+          pendingUploads.map((upload) => (
+            <ImageApprovalCard key={upload.id} upload={upload} onUpdate={mutate} />
+          ))
+        )}
+      </div>
+
+      {/* Rejected section (last) */}
+      {rejectedUploads.length > 0 && (
+        <div id='rejected-uploads' className='scroll-mt-20 space-y-3 border-t pt-6'>
+          <h2 className='text-lg font-semibold flex items-center gap-2'>
+            <Badge variant='destructive'>REJECTED</Badge>
+            <span className='text-sm font-normal text-muted-foreground'>({rejectedUploads.length})</span>
+          </h2>
+          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
+            {rejectedUploads.map((upload) => (
+              <div key={upload.id} className='border rounded-lg p-3 space-y-2'>
+                <a
+                  href={upload.imageUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='relative block aspect-square rounded-md overflow-hidden bg-muted'
+                >
+                  <Image src={upload.imageUrl} alt='Rejected upload' fill className='object-cover opacity-70' />
+                </a>
+                <p className='text-xs font-medium'>{upload.crafter.businessName}</p>
+                {upload.rejectionReason && (
+                  <p className='text-xs text-red-600'>Reason: {upload.rejectionReason}</p>
+                )}
+                <Button
+                  size='sm'
+                  variant='destructive'
+                  className='w-full'
+                  onClick={() => handleDelete(upload.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -86,6 +164,14 @@ export default function ImageApprovalList() {
 function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate: () => void }) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [formData, setFormData] = useState({
+    costPrice: upload.costPrice?.toString() || '',
+    weight: upload.weight?.toString() || '',
+    height: upload.height?.toString() || '',
+    width: upload.width?.toString() || '',
+    depth: upload.depth?.toString() || '',
+    availability: upload.availability?.toString() || '3',
+  });
 
   const handleApprove = async () => {
     setProcessing(true);
@@ -93,7 +179,10 @@ function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate
       const res = await fetch(`/api/admin/image-approvals/${upload.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve' }),
+        body: JSON.stringify({ 
+          action: 'approve',
+          formData: formData 
+        }),
       });
 
       const data = await res.json();
@@ -138,26 +227,98 @@ function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate
 
   return (
     <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span>{upload.crafter.businessName}</span>
+          <Badge variant="outline">{upload.status}</Badge>
+        </CardTitle>
+      </CardHeader>
       <CardContent className='p-6'>
-        <div className='flex gap-6'>
-          <div className='relative w-48 h-48 flex-shrink-0 bg-muted rounded-lg overflow-hidden'>
+        <div className='flex flex-col lg:flex-row gap-6'>
+          <a
+            href={upload.imageUrl}
+            target='_blank'
+            rel='noopener noreferrer'
+            title='Click to view full-size image'
+            className='relative w-full lg:w-48 h-48 flex-shrink-0 bg-muted rounded-lg overflow-hidden block group'
+          >
             <Image
               src={upload.imageUrl}
               alt='Product image'
               fill
-              className='object-contain'
+              className='object-contain group-hover:opacity-90'
             />
-          </div>
+            <span className='absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded'>
+              Click to enlarge
+            </span>
+          </a>
 
           <div className='flex-1 space-y-4'>
             <div>
-              <div className='flex items-center gap-2 mb-2'>
-                <h3 className='font-semibold'>{upload.crafter.businessName}</h3>
-                <Badge variant='outline'>{upload.crafter.mobile}</Badge>
-              </div>
               <p className='text-sm text-muted-foreground'>
                 Uploaded: {new Date(upload.createdAt).toLocaleString()}
               </p>
+              <p className='text-sm text-muted-foreground'>
+                Mobile: {upload.crafter.mobile}
+              </p>
+            </div>
+
+            {/* Product Fields */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div>
+                <Label>Cost Price</Label>
+                <Input
+                  type="number"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label>Weight (kg)</Label>
+                <Input
+                  type="number"
+                  value={formData.weight}
+                  onChange={(e) => setFormData({...formData, weight: e.target.value})}
+                  placeholder="0.0"
+                />
+              </div>
+              <div>
+                <Label>Height (cm)</Label>
+                <Input
+                  type="number"
+                  value={formData.height}
+                  onChange={(e) => setFormData({...formData, height: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Width (cm)</Label>
+                <Input
+                  type="number"
+                  value={formData.width}
+                  onChange={(e) => setFormData({...formData, width: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Depth (cm)</Label>
+                <Input
+                  type="number"
+                  value={formData.depth}
+                  onChange={(e) => setFormData({...formData, depth: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Availability (days)</Label>
+                <Input
+                  type="number"
+                  value={formData.availability}
+                  onChange={(e) => setFormData({...formData, availability: e.target.value})}
+                  placeholder="3"
+                />
+              </div>
             </div>
 
             <div className='flex gap-2'>

@@ -49,108 +49,34 @@ export default function CrafterDashboard({ crafterName }: CrafterDashboardProps)
   const payments = paymentData?.data;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 sm:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{crafterName} Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{crafterName} Dashboard</h1>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {stats && (
           <>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Registered Items
+              <CardHeader className="pb-2 px-3 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Products Approved
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.registeredItems}</div>
+              <CardContent className="px-3 sm:px-6">
+                <div className="text-xl sm:text-2xl font-bold">{stats.approvedItems}</div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Approved Items
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.approvedItems}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Sold Items
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.soldItems}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardHeader className="pb-2 px-3 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                   Funds Due
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">R{stats.fundsDue.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {payments && (
-          <>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Pending Payments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">R{payments.totalPending.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Processing Payments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">R{payments.totalProcessing.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Paid
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">R{payments.totalPaid.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Payment History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Link href="/crafter/payments">
-                  <Button variant="outline" className="w-full">
-                    View All Payments
-                  </Button>
-                </Link>
+              <CardContent className="px-3 sm:px-6">
+                <div className="text-xl sm:text-2xl font-bold">R{stats.fundsDue.toFixed(2)}</div>
               </CardContent>
             </Card>
           </>
@@ -162,7 +88,7 @@ export default function CrafterDashboard({ crafterName }: CrafterDashboardProps)
 
       {/* Products List */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Your Products</h2>
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Your Products</h2>
         <CrafterProductsList crafterName={crafterName} />
       </div>
     </div>

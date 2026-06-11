@@ -73,6 +73,7 @@ export type CrafterWithDetails = {
     name: string;
     location: string;
     mobile: string;
+    category?: string | null;
     productCount: number;
     isActive: boolean;
     linkedUser?: { id: string; name: string; email: string } | null;

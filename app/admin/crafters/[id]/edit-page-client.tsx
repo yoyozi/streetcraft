@@ -18,6 +18,7 @@ interface CrafterData {
   mobile: string;
   profileImage?: string | null;
   workSamples?: string[];
+  personalName?: string;
 }
 
 interface CrafterFormValues {
@@ -98,7 +99,8 @@ export default function EditPageClient({ crafter, imageCounts: initialCounts, so
   return (
     <div className='space-y-8'>
       <div>
-        <h2 className='h2-bold'>Edit Crafter</h2>
+        <h2 className='h2-bold'>Edit Crafter: {crafter.personalName} - {crafter.businessName || 'No business name'} - {crafter.mobile}</h2>
+        <p className="text-sm text-muted-foreground mt-1">Username and mobile number cannot be changed (only in user section or by crafter)</p>
         <div className='my-8'>
           <CrafterForm type='Update' crafter={crafter} onSubmit={handleFormSubmit} formRef={formRef} />
         </div>

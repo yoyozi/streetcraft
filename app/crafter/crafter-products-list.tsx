@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { Product } from '@/types';
-import { updateProductAvailability, updateProductCostPrice, toggleProductActive } from '@/lib/actions/product.actions';
+import { updateProductAvailability, updateProductCostPrice } from '@/lib/actions/product.actions';
 import { toast } from 'sonner';
 
 interface CrafterProductsListProps {
@@ -144,7 +144,7 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        -1 = Not Available, 0 = In Stock, 1+ = Days until available
+        0 = Out of stock (deactivates & sends for admin review), 1+ = Days until available
       </p>
     </div>
   );
@@ -163,16 +163,6 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
   );
 
   const products = data?.data || [];
-
-  const handleToggleActive = async (productId: string, currentStatus: boolean) => {
-    const result = await toggleProductActive(productId);
-    if (result.success) {
-      toast.success(result.message);
-      mutate();
-    } else {
-      toast.error(result.message);
-    }
-  };
 
   const getAvailabilityLabel = (availability: number) => {
     if (availability === -1) return { label: 'Not Available', variant: 'destructive' as const, className: '' };
@@ -257,13 +247,11 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
                       <Badge variant={availability.variant} className={availability.className}>
                         {availability.label}
                       </Badge>
-                      <Button
-                        size="sm"
-                        variant={product.isActive ? "destructive" : "default"}
-                        onClick={() => handleToggleActive(product.id, product.isActive)}
-                      >
-                        {product.isActive ? 'Deactivate' : 'Activate'}
-                      </Button>
+                      {product.priceNeedsReview && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">
+                          Pending admin review
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <CostPriceEditor product={product} onUpdate={() => mutate()} />
