@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PasswordInput from "@/components/ui/password-input";
 import { useState, useEffect } from "react";
 import { resetPassword } from "@/lib/actions/user.actions";
 import { toast } from "sonner";
@@ -57,24 +58,22 @@ const ResetPasswordForm = ({ searchParams }: { searchParams: Promise<{ token?: s
       <div className="space-y-6">
         <div>
           <Label htmlFor='newPassword'>New Password</Label>
-          <Input 
+          <PasswordInput 
             id='newPassword' 
-            type='password' 
-            required 
-            autoCapitalize="none"
             placeholder="Enter your new password"
+            required
+            autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
         </div>
         <div>
           <Label htmlFor='confirmPassword'>Confirm New Password</Label>
-          <Input 
+          <PasswordInput 
             id='confirmPassword' 
-            type='password' 
-            required 
-            autoCapitalize="none"
             placeholder="Confirm your new password"
+            required
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />

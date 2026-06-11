@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage, Form as FormUI } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PasswordInputFormField } from "@/components/ui/password-input";
 import { updateProfile, changePassword } from "@/lib/actions/user.actions";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,7 +152,7 @@ const Profileform = () => {
                                             <FormItem>
                                                 <FormLabel>Current Password</FormLabel>
                                                 <FormControl>
-                                                    <Input type="password" placeholder="Current password" className='input-field' {...field} />
+                                                    <PasswordInputFormField placeholder="Current password" className='input-field' {...field} />
                                                 </FormControl>
                                                 <FormMessage/>
                                             </FormItem>
@@ -165,7 +166,7 @@ const Profileform = () => {
                                             <FormItem>
                                                 <FormLabel>New Password</FormLabel>
                                                 <FormControl>
-                                                    <Input type="password" placeholder="New password" className='input-field' {...field} />
+                                                    <PasswordInputFormField placeholder="New password" className='input-field' {...field} />
                                                 </FormControl>
                                                 <FormMessage/>
                                             </FormItem>
@@ -179,7 +180,7 @@ const Profileform = () => {
                                             <FormItem>
                                                 <FormLabel>Confirm New Password</FormLabel>
                                                 <FormControl>
-                                                    <Input type="password" placeholder="Confirm new password" className='input-field' {...field} />
+                                                    <PasswordInputFormField placeholder="Confirm new password" className='input-field' {...field} />
                                                 </FormControl>
                                                 <FormMessage/>
                                             </FormItem>
