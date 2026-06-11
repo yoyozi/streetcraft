@@ -18,6 +18,11 @@ const UPLOADER_KEYS = {
   DAILY_UPLOAD_LIMIT: 'daily_upload_limit',
 } as const;
 
+// Admin digest settings keys
+const DIGEST_KEYS = {
+  DIGEST_ENABLED: 'digest_enabled',
+} as const;
+
 export interface DealSettings {
   isActive: boolean;
   targetDate: string;
@@ -28,6 +33,10 @@ export interface DealSettings {
 
 export interface UploaderSettings {
   dailyUploadLimit: number;
+}
+
+export interface DigestSettings {
+  enabled: boolean;
 }
 
 // Get deal settings (public - no auth required)
@@ -123,5 +132,37 @@ export async function updateUploaderSettings(data: UploaderSettings) {
   } catch (error) {
     console.error('Error updating uploader settings:', error);
     return { success: false, error: 'Failed to update uploader settings' };
+  }
+}
+
+// Get admin digest settings (enabled by default)
+export async function getDigestSettings(): Promise<DigestSettings> {
+  const setting = await prisma.siteSetting.findUnique({
+    where: { key: DIGEST_KEYS.DIGEST_ENABLED },
+  });
+
+  // Default to enabled when not explicitly set
+  return { enabled: setting ? setting.value === 'true' : true };
+}
+
+// Update admin digest settings (admin only)
+export async function updateDigestSettings(data: DigestSettings) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    await prisma.siteSetting.upsert({
+      where: { key: DIGEST_KEYS.DIGEST_ENABLED },
+      update: { value: String(data.enabled) },
+      create: { key: DIGEST_KEYS.DIGEST_ENABLED, value: String(data.enabled) },
+    });
+
+    revalidatePath('/admin/settings');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating digest settings:', error);
+    return { success: false, error: 'Failed to update digest settings' };
   }
 }

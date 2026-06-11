@@ -26,6 +26,7 @@ interface ImageUpload {
   depth?: number;
   availability?: number;
   description?: string;
+  isUnique?: boolean;
   crafter: {
     id: string;
     businessName: string;
@@ -171,6 +172,7 @@ function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate
     width: upload.width?.toString() || '',
     depth: upload.depth?.toString() || '',
     availability: upload.availability?.toString() || '3',
+    isUnique: upload.isUnique || false,
   });
 
   const handleApprove = async () => {
@@ -310,16 +312,31 @@ function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate
                   placeholder="0"
                 />
               </div>
-              <div>
-                <Label>Availability (days)</Label>
-                <Input
-                  type="number"
-                  value={formData.availability}
-                  onChange={(e) => setFormData({...formData, availability: e.target.value})}
-                  placeholder="3"
-                />
-              </div>
+              {!formData.isUnique && (
+                <div>
+                  <Label>Availability (days)</Label>
+                  <Input
+                    type="number"
+                    value={formData.availability}
+                    onChange={(e) => setFormData({...formData, availability: e.target.value})}
+                    placeholder="3"
+                  />
+                </div>
+              )}
             </div>
+
+            <label className='flex items-start gap-2 rounded-md border p-2 cursor-pointer'>
+              <input
+                type='checkbox'
+                className='mt-1'
+                checked={formData.isUnique}
+                onChange={(e) => setFormData({...formData, isUnique: e.target.checked})}
+              />
+              <span className='text-sm'>
+                <span className='font-medium'>Unique item</span>
+                <span className='block text-xs text-muted-foreground'>One-of-a-kind (e.g. a painting). Only one will be sold.</span>
+              </span>
+            </label>
 
             <div className='flex gap-2'>
               <Button

@@ -25,6 +25,7 @@ function serializeProduct(product: any) {
     price: product.price?.toString() || '0',
     costPrice: product.costPrice || 0,
     priceNeedsReview: product.priceNeedsReview || false,
+    reviewReason: product.reviewReason || null,
     lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
     rating: product.rating?.toString() || '0',
     createdAt: product.createdAt?.toISOString(),
@@ -239,6 +240,7 @@ export async function getAdminProductsGroupedByCrafter({
       price: product.price.toString(),
       costPrice: product.costPrice || 0,
       priceNeedsReview: product.priceNeedsReview || false,
+    reviewReason: product.reviewReason || null,
       lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
       isActive: product.isActive,
       rating: product.rating?.toString() || '0',
@@ -360,6 +362,7 @@ export async function createProduct(data: z.infer<typeof insertProductSchema> & 
           width: Number(product.width) || 0,
           depth: Number(product.depth) || 0,
           priceNeedsReview: product.priceNeedsReview ?? false,
+          reviewReason: product.reviewReason ?? null,
           availability: product.isUnique ? 1 : (product.availability ?? 3),
           tags: product.tags ?? [],
           crafterId: product.crafterId || null,
@@ -436,6 +439,7 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema> & 
           width: Number(product.width) || 0,
           depth: Number(product.depth) || 0,
           priceNeedsReview: product.priceNeedsReview,
+          reviewReason: product.reviewReason ?? null,
           availability: product.isUnique ? 1 : product.availability,
           tags: product.tags,
           crafterId: product.crafterId || null,
@@ -701,14 +705,19 @@ export async function updateProductAvailability(
     
     await prisma.product.update({
       where: { id: productId },
-      data: { availability, ...(availability === 0 ? { isActive: false, priceNeedsReview: true } : {}) },
+      data: {
+        availability,
+        ...(availability === -1
+          ? { isActive: false, priceNeedsReview: true, reviewReason: 'Marked Not Available (out of stock)' }
+          : {}),
+      },
     });
     
     revalidatePath('/crafter/availability');
     revalidatePath('/crafter/products');
     
     revalidatePath('/admin/products');
-    return { success: true, message: availability === 0 ? 'Set to out of stock — product deactivated and sent for admin review' : 'Availability updated successfully' };
+    return { success: true, message: availability === -1 ? 'Marked Not Available — product deactivated and sent for admin review' : 'Availability updated successfully' };
   } catch {
     return { success: false, message: 'Failed to update availability' };
   }
@@ -749,7 +758,9 @@ export async function updateProductCostPrice(
       data: {
         costPrice,
         priceNeedsReview: true,
+        reviewReason: `Cost price R${product.costPrice ?? 0} → R${costPrice}`,
         lastCostPriceUpdate: new Date(),
+        isActive: false, // Deactivate until an admin reviews the new price
       },
     });
     
@@ -782,7 +793,7 @@ export async function markPriceAsReviewed(productId: string): Promise<{ success:
     
     await prisma.product.update({
       where: { id: productId },
-      data: { priceNeedsReview: false },
+      data: { priceNeedsReview: false, reviewReason: null },
     });
     
     revalidatePath('/admin/products');
@@ -877,6 +888,7 @@ export async function getAdminProducts({
     price: product.price.toString(),
     costPrice: product.costPrice || 0,
     priceNeedsReview: product.priceNeedsReview || false,
+    reviewReason: product.reviewReason || null,
     lastCostPriceUpdate: product.lastCostPriceUpdate?.toISOString() || null,
     availability: product.availability,
     isActive: product.isActive,
@@ -937,9 +949,11 @@ export async function toggleProductActive(productId: string): Promise<{ success:
       }
     }
     
+    const activating = !product.isActive;
     const updated = await prisma.product.update({
       where: { id: productId },
-      data: { isActive: !product.isActive },
+      // When the admin activates a product, clear any pending review flag/reason
+      data: { isActive: activating, ...(activating ? { priceNeedsReview: false, reviewReason: null } : {}) },
     });
     
     return {

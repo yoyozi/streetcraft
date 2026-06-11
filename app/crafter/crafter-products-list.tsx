@@ -144,7 +144,7 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        0 = Out of stock (deactivates & sends for admin review), 1+ = Days until available
+        -1 = Not Available (deactivates & sends for admin review), 0 = In Stock, 1+ = Days until available
       </p>
     </div>
   );

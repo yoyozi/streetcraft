@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { updateDealSettings, DealSettings } from '@/lib/actions/settings.actions';
 import { UploadButton } from '@/lib/uploadthing';
+import { optimizeImages } from '@/lib/image-optimizer';
 
 import Image from 'next/image';
 
@@ -114,13 +115,20 @@ export default function DealSettingsForm({ settings }: { settings: DealSettings 
             ) : (
               <UploadButton
                 endpoint='imageUploader'
+                appearance={{
+                  button: 'bg-chart-2 text-white ut-uploading:cursor-not-allowed px-4 py-2 rounded-md',
+                  allowedContent: 'text-muted-foreground text-xs',
+                }}
+                content={{
+                  button({ ready }) {
+                    return ready ? 'Upload Image' : 'Getting ready...';
+                  },
+                }}
+                onBeforeUploadBegin={(files) => optimizeImages(files)}
                 onClientUploadComplete={(res: { url: string }[]) => {
                   const imageUrl = res[0].url;
                   setImage(imageUrl);
                   toast.success('Image uploaded');
-                  
-                  // Optimize in background and update state with new URL
-                  optimizeImageInBackground(imageUrl);
                 }}
                 onUploadError={(error: Error) => {
                   toast.error(`Upload failed: ${error.message}`);
@@ -136,26 +144,4 @@ export default function DealSettingsForm({ settings }: { settings: DealSettings 
       </CardContent>
     </Card>
   );
-
-  // Background optimization function
-  const optimizeImageInBackground = async (imageUrl: string) => {
-    try {
-      const response = await fetch('/api/optimize-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl }),
-      });
-      
-      const result = await response.json();
-      if (result.success && result.newUrl) {
-        // Update the state with the new optimized URL
-        if (image === result.oldUrl) {
-          setImage(result.newUrl);
-          console.log('Deal image optimized and URL updated:', result);
-        }
-      }
-    } catch (error) {
-      console.warn('Background optimization failed:', error);
-    }
-  };
 }

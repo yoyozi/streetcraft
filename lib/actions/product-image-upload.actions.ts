@@ -113,7 +113,22 @@ export async function getCrafterUploadStatus(): Promise<{
   remaining: number;
   limit: number;
   pendingCount: number;
-  uploads?: Array<{ id: string; imageUrl: string; status: string; createdAt: string }>;
+  uploads?: Array<{
+    id: string;
+    imageUrl: string;
+    status: string;
+    createdAt: string;
+    rejectionReason: string | null;
+    name: string | null;
+    costPrice: number | null;
+    weight: number | null;
+    height: number | null;
+    width: number | null;
+    depth: number | null;
+    availability: number | null;
+    description: string | null;
+    isUnique: boolean;
+  }>;
   error?: string;
 }> {
   try {
@@ -155,6 +170,16 @@ export async function getCrafterUploadStatus(): Promise<{
         imageUrl: true,
         status: true,
         createdAt: true,
+        rejectionReason: true,
+        name: true,
+        costPrice: true,
+        weight: true,
+        height: true,
+        width: true,
+        depth: true,
+        availability: true,
+        description: true,
+        isUnique: true,
       },
     });
 
@@ -280,7 +305,8 @@ export async function approveImageUpload(uploadId: string): Promise<ProductImage
         height: upload.height,
         width: upload.width,
         depth: upload.depth,
-        availability: upload.availability,
+        availability: upload.isUnique ? 1 : upload.availability, // Unique items always have availability 1
+        isUnique: upload.isUnique,
         images: [upload.imageUrl],
         crafterId: upload.crafterId,
         isActive: false, // Draft - admin must set name and activate on products page

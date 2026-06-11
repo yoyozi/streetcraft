@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UploadDropzone } from '@/lib/uploadthing';
+import { optimizeImages } from '@/lib/image-optimizer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +40,7 @@ interface UploadData {
   depth?: number;
   availability?: number;
   description?: string;
+  isUnique?: boolean;
 }
 
 export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps) {
@@ -59,6 +61,7 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
     width: string;
     depth: string;
     availability: string;
+    isUnique: boolean;
     submitted: boolean;
   }>>({});
 
@@ -79,6 +82,7 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
         width: string;
         depth: string;
         availability: string;
+        isUnique: boolean;
         submitted: boolean;
       }> = {};
       
@@ -91,6 +95,7 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
             width: upload.width?.toString() || '',
             depth: upload.depth?.toString() || '',
             availability: upload.availability?.toString() || '3',
+            isUnique: upload.isUnique || false,
             submitted: false,
           };
         }
@@ -225,6 +230,7 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
         <div className="bg-chart-2 rounded-2xl">
           <UploadDropzone
             endpoint="crafterProductImage"
+            onBeforeUploadBegin={(files) => optimizeImages(files)}
             onClientUploadComplete={handleUploadComplete}
             onUploadError={(error: Error) => {
               toast.error(`Upload failed: ${error.message}`);
@@ -350,19 +356,37 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
                             disabled={formDataMap[upload.id]?.submitted}
                           />
                         </div>
-                        <div>
-                          <Label>Availability (days)</Label>
-                          <Input
-                            type="number"
-                            value={formDataMap[upload.id]?.availability || upload.availability?.toString() || '3'}
+                        {!formDataMap[upload.id]?.isUnique && (
+                          <div>
+                            <Label>Availability (days)</Label>
+                            <Input
+                              type="number"
+                              value={formDataMap[upload.id]?.availability || upload.availability?.toString() || '3'}
+                              onChange={(e) => setFormDataMap({
+                                ...formDataMap,
+                                [upload.id]: { ...formDataMap[upload.id], availability: e.target.value, submitted: false }
+                              })}
+                              placeholder="3"
+                              disabled={formDataMap[upload.id]?.submitted}
+                            />
+                          </div>
+                        )}
+                        <label className="flex items-start gap-2 rounded-md border p-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={formDataMap[upload.id]?.isUnique || false}
                             onChange={(e) => setFormDataMap({
                               ...formDataMap,
-                              [upload.id]: { ...formDataMap[upload.id], availability: e.target.value, submitted: false }
+                              [upload.id]: { ...formDataMap[upload.id], isUnique: e.target.checked, submitted: false }
                             })}
-                            placeholder="3"
                             disabled={formDataMap[upload.id]?.submitted}
                           />
-                        </div>
+                          <span className="text-sm">
+                            <span className="font-medium">Unique item</span>
+                            <span className="block text-xs text-muted-foreground">One-of-a-kind (e.g. a painting). Only one will be sold.</span>
+                          </span>
+                        </label>
                       </div>
                       <Button 
                         onClick={() => handleSubmitForApproval(upload.id)} 
@@ -421,13 +445,13 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
                 <div key={upload.id} className="relative">
                   <div className="relative aspect-square rounded-lg overflow-hidden border opacity-60">
                     <Image src={upload.imageUrl} alt="Upload" fill className="object-cover" />
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="destructive" className="text-xs">REJECTED</Badge>
-                    </div>
                   </div>
-                  {upload.rejectionReason && (
-                    <p className="text-xs text-red-600 mt-1">{upload.rejectionReason}</p>
-                  )}
+                  <div className="mt-1 rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-2">
+                    <p className="text-xs font-medium text-red-700 dark:text-red-300">Reason for rejection:</p>
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {upload.rejectionReason || 'No reason provided'}
+                    </p>
+                  </div>
                   <Button
                     size="sm"
                     variant="destructive"

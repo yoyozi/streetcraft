@@ -32,7 +32,8 @@ export async function POST(
             height: formData.height ? parseFloat(formData.height) : undefined,
             width: formData.width ? parseFloat(formData.width) : undefined,
             depth: formData.depth ? parseFloat(formData.depth) : undefined,
-            availability: formData.availability ? parseInt(formData.availability) : undefined,
+            availability: formData.isUnique ? 1 : (formData.availability ? parseInt(formData.availability) : undefined),
+            isUnique: typeof formData.isUnique === 'boolean' ? formData.isUnique : undefined,
           },
         });
       }

@@ -25,6 +25,7 @@ import DeleteDialog from '@/components/shared/delete-dialog';
 import { deleteProduct, toggleProductActive } from '@/lib/actions/product.actions';
 import ToggleFirstPageButton from './toggle-first-page-button';
 import { toast } from 'sonner';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -33,6 +34,7 @@ interface Product {
   price: string;
   costPrice?: number;
   priceNeedsReview?: boolean;
+  reviewReason?: string | null;
   lastCostPriceUpdate?: string;
   availability: number;
   isActive: boolean;
@@ -56,6 +58,16 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
   const router = useRouter();
   const searchParams = useSearchParams();
   const [togglingProducts, setTogglingProducts] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+
+  const needsReviewCount = products.filter((p) => p && p.priceNeedsReview).length;
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    router.refresh();
+    // Brief visual feedback; server data re-renders on refresh
+    setTimeout(() => setRefreshing(false), 800);
+  };
 
   const getAvailabilityLabel = (product: Product) => {
     if (product.isUnique) return { label: 'Unique', variant: 'default' as const, className: 'bg-purple-600 hover:bg-purple-600/90 text-white' };
@@ -104,7 +116,7 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
 
   return (
     <div>
-      <div className='mb-4 flex items-center gap-2'>
+      <div className='mb-4 flex flex-wrap items-center gap-2'>
         <span className='text-sm font-medium'>Crafter:</span>
         <Select value={selectedCrafter || 'all'} onValueChange={handleCrafterChange}>
           <SelectTrigger className='w-[250px]'>
@@ -119,6 +131,19 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
             ))}
           </SelectContent>
         </Select>
+
+        <div className='ml-auto flex items-center gap-2'>
+          {needsReviewCount > 0 && (
+            <Badge variant='destructive' className='gap-1'>
+              <AlertCircle className='h-3 w-3' />
+              {needsReviewCount} need{needsReviewCount === 1 ? 's' : ''} review
+            </Badge>
+          )}
+          <Button variant='outline' size='sm' onClick={handleRefresh} disabled={refreshing} className='gap-1'>
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Table>
@@ -144,6 +169,11 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
                     {product.description && (
                       <span className={`text-sm font-normal ml-2 ${product.priceNeedsReview ? 'text-white/90' : 'text-muted-foreground'}`}>
                         - {product.description}
+                      </span>
+                    )}
+                    {product.priceNeedsReview && product.reviewReason && (
+                      <span className='block text-xs font-normal text-white/90 mt-0.5'>
+                        Changed: {product.reviewReason}
                       </span>
                     )}
                   </div>

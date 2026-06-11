@@ -26,6 +26,7 @@ interface Product {
   price: string;
   costPrice?: number;
   priceNeedsReview?: boolean;
+  reviewReason?: string | null;
   lastCostPriceUpdate?: string;
   availability: number;
   isActive: boolean;
@@ -168,9 +169,15 @@ export default function AdminCrafterProductGroup({
                     <GripVertical className='h-4 w-4 text-muted-foreground' />
                   </TableCell>
                   <TableCell className='w-[100px] font-medium'>
-                    <Link href={`/admin/products/${product.id}`} className='hover:underline truncate block'>
+                    <Link
+                      href={`/admin/products/${product.id}`}
+                      className={`hover:underline truncate block ${product.priceNeedsReview ? 'border border-red-500 bg-red-50 text-red-700 rounded px-1' : ''}`}
+                    >
                       {product.name}
                     </Link>
+                    {product.priceNeedsReview && product.reviewReason && (
+                      <span className='block text-[10px] text-red-600 mt-0.5'>{product.reviewReason}</span>
+                    )}
                   </TableCell>
                   <TableCell className='w-[120px] text-right'>
                     {formatCurrency(product.price)}

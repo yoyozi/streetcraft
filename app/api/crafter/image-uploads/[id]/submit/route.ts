@@ -15,9 +15,9 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { costPrice, weight, height, width, depth, availability } = body;
+    const { costPrice, weight, height, width, depth, availability, isUnique } = body;
 
-    console.log('Received form data:', { costPrice, weight, height, width, depth, availability });
+    console.log('Received form data:', { costPrice, weight, height, width, depth, availability, isUnique });
 
     // Verify the upload belongs to this crafter
     const crafter = await prisma.crafter.findUnique({
@@ -45,7 +45,8 @@ export async function POST(
         height: height && height.trim() !== '' ? parseFloat(height) : upload.height,
         width: width && width.trim() !== '' ? parseFloat(width) : upload.width,
         depth: depth && depth.trim() !== '' ? parseFloat(depth) : upload.depth,
-        availability: availability && availability.trim() !== '' ? parseInt(availability) : upload.availability,
+        availability: isUnique ? 1 : (availability && availability.trim() !== '' ? parseInt(availability) : upload.availability),
+        isUnique: typeof isUnique === 'boolean' ? isUnique : upload.isUnique,
       },
     });
 

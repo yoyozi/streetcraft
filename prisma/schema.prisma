@@ -202,6 +202,7 @@ model Product {
   price               Float     @default(0)
   costPrice           Float     @default(0)
   priceNeedsReview    Boolean   @default(false)
+  reviewReason        String?
   lastCostPriceUpdate DateTime?
   weight              Float     @default(0)
   height              Float     @default(0)
@@ -256,6 +257,7 @@ model ProductImageUpload {
   depth       Float?
   availability Int?
   description String?
+  isUnique    Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
