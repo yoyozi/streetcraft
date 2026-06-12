@@ -23,6 +23,13 @@ export default async function SignInPage(props: {
     const session = await auth();
 
     if (session) {
+        const role = session.user?.role;
+        if (role === 'craft' && !callbackUrl.startsWith('/crafter')) {
+            return redirect('/crafter');
+        }
+        if (role === 'admin' && !callbackUrl.startsWith('/admin')) {
+            return redirect('/admin');
+        }
         return redirect(callbackUrl || '/');
     }
 

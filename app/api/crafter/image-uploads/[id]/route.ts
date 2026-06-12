@@ -1,6 +1,15 @@
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { UTApi } from 'uploadthing/server';
+
+const utapi = new UTApi();
+
+// Extract the UploadThing file key from a stored image URL (…/f/{key})
+function fileKeyFromUrl(url: string): string | null {
+  const match = url.match(/\/f\/([^/?]+)/);
+  return match ? match[1] : null;
+}
 
 export async function DELETE(
   request: Request,
@@ -34,6 +43,17 @@ export async function DELETE(
     // Only allow deletion of REJECTED uploads
     if (upload.status !== 'REJECTED') {
       return NextResponse.json({ error: 'Can only delete rejected uploads' }, { status: 400 });
+    }
+
+    // Delete the file from UploadThing first, then remove the DB record
+    const fileKey = fileKeyFromUrl(upload.imageUrl);
+    if (fileKey) {
+      try {
+        await utapi.deleteFiles([fileKey]);
+      } catch (e) {
+        console.error('Failed to delete file from UploadThing:', e);
+        // Continue — we still remove the DB record so it leaves the UI
+      }
     }
 
     await prisma.productImageUpload.delete({

@@ -130,6 +130,18 @@ export async function updateCrafter(
       data: updateData,
     });
 
+    // Products are categorised indirectly via their crafter's category. Keep the
+    // denormalised Product.category in sync so storefront filters stay correct.
+    if (data.category !== undefined) {
+      const newCategory = data.category && data.category.trim() !== '' ? data.category.trim() : 'Uncategorized';
+      await prisma.product.updateMany({
+        where: { crafterId: id },
+        data: { category: newCategory },
+      });
+      revalidatePath('/');
+      revalidatePath('/search');
+    }
+
     // Also update the linked User record
     const userUpdate: Record<string, unknown> = {};
     if (data.name) userUpdate.name = data.name.trim();
@@ -211,6 +223,7 @@ export async function getAllCrafters(filter?: { isActive?: boolean }) {
       _id: crafter.id,
       id: crafter.id,
       name: crafter.businessName || crafter.user?.name || 'No name',
+      businessName: crafter.businessName || '',
       location: crafter.location,
       mobile: crafter.mobile,
       category: crafter.category?.name || null,
@@ -246,6 +259,7 @@ export async function getCrafterById(id: string) {
             email: true,
           },
         },
+        category: { select: { name: true } },
       },
     });
 
@@ -261,6 +275,8 @@ export async function getCrafterById(id: string) {
         personalName: crafter.user?.name || 'No name',
         name: crafter.businessName, // Map businessName to name for compatibility
         businessName: crafter.businessName,
+        // Return the category NAME so the edit form pre-selects it (not "none")
+        category: crafter.category?.name || '',
         productCount: crafter._count.products,
         createdAt: crafter.createdAt.toISOString(),
         updatedAt: crafter.updatedAt.toISOString(),

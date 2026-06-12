@@ -34,7 +34,7 @@ export function ProductCarousel({ data }: { data: Product[] }) {
         {data.map((product: Product) => (
           <CarouselItem key={product.id}>
             <Link href={`/product/${product.slug}`}>
-              <div className='relative mx-auto w-full aspect-[1920/680] overflow-hidden rounded-sm'>
+              <div className='relative mx-auto w-full aspect-[1920/560] overflow-hidden rounded-sm'>
                 <Image
                   alt={product.name}
                   src={product.banner || product.images?.[0] || '/images/banner-1.jpg'}

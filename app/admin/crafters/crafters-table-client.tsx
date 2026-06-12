@@ -61,35 +61,20 @@ export default function CraftersTableClient({ crafters, categories }: CraftersTa
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>NAME</TableHead>
-            <TableHead>CATEGORY</TableHead>
+            <TableHead>BUSINESS NAME</TableHead>
+            <TableHead>USER</TableHead>
             <TableHead>LOCATION</TableHead>
             <TableHead>CONTACT NUMBER</TableHead>
             <TableHead className='text-center'>PRODUCTS</TableHead>
             <TableHead className='text-center'>STATUS</TableHead>
-            <TableHead>CRAFT USER</TableHead>
             <TableHead className='w-[100px]'>ACTIONS</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredCrafters.map((crafter: CrafterWithDetails) => (
             <TableRow key={crafter._id}>
-              <TableCell className='font-medium'>{crafter.name}</TableCell>
-              <TableCell>
-                {crafter.category ? (
-                  <Badge variant='secondary' className='text-xs'>{crafter.category}</Badge>
-                ) : (
-                  <Badge variant='outline' className='text-xs'>None</Badge>
-                )}
-              </TableCell>
-              <TableCell>{crafter.location}</TableCell>
-              <TableCell>{crafter.mobile}</TableCell>
-              <TableCell className='text-center'>{crafter.productCount}</TableCell>
-              <TableCell className='text-center'>
-                <ToggleCrafterStatusButton
-                  crafterId={crafter._id}
-                  isActive={crafter.isActive}
-                />
+              <TableCell className='font-medium'>
+                {crafter.businessName || <span className='text-muted-foreground'>No business name</span>}
               </TableCell>
               <TableCell>
                 {crafter.linkedUser ? (
@@ -101,6 +86,15 @@ export default function CraftersTableClient({ crafters, categories }: CraftersTa
                     Unallocated
                   </Badge>
                 )}
+              </TableCell>
+              <TableCell>{crafter.location}</TableCell>
+              <TableCell>{crafter.mobile}</TableCell>
+              <TableCell className='text-center'>{crafter.productCount}</TableCell>
+              <TableCell className='text-center'>
+                <ToggleCrafterStatusButton
+                  crafterId={crafter._id}
+                  isActive={crafter.isActive}
+                />
               </TableCell>
               <TableCell className='flex gap-1'>
                 <Button asChild variant='outline' size='sm'>

@@ -77,14 +77,15 @@ export async function signInWithCredentials(
         redirectTo: `/reset-password?token=${resetToken}`,
       });
     } else {
-      // Normal sign in flow - redirect based on role
+      // Normal sign in flow - redirect based on role.
+      // Crafters always go to their dashboard, admins to the admin area,
+      // unless they were headed somewhere already within their own area.
       let redirectUrl = callbackUrl;
-      
-      // If callback is home page, redirect based on role
-      if (callbackUrl === '/' && user) {
-        if (user.role === 'craft') {
+
+      if (user) {
+        if (user.role === 'craft' && !callbackUrl.startsWith('/crafter')) {
           redirectUrl = '/crafter';
-        } else if (user.role === 'admin') {
+        } else if (user.role === 'admin' && !callbackUrl.startsWith('/admin')) {
           redirectUrl = '/admin';
         }
       }

@@ -71,6 +71,7 @@ export type Review = z.infer<typeof insertReviewSchema> & {
 export type CrafterWithDetails = {
     _id: string;
     name: string;
+    businessName?: string;
     location: string;
     mobile: string;
     category?: string | null;

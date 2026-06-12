@@ -23,6 +23,13 @@ const UpdateProductPage = async (props: {
   return (
     <div className='space-y-8 max-w-5xl mx-auto'>
       <h1 className='h2-bold'>Update Product - R{product.costPrice}</h1>
+      <div className='rounded-lg border bg-muted/40 p-3 text-sm'>
+        <span className='font-medium'>Category (from crafter):</span>{' '}
+        <span className='text-muted-foreground'>{product.category || 'Uncategorized'}</span>
+        <p className='mt-1 text-xs text-muted-foreground'>
+          Set on the crafter, not the product. Change it in Admin → Crafters → Edit; all the crafter&apos;s products update automatically.
+        </p>
+      </div>
       {product.priceNeedsReview && (
         <div className='rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700'>
           <p className='font-semibold'>Needs review — changed by the crafter</p>

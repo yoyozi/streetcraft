@@ -2,6 +2,9 @@ import { auth } from '@/auth';
 import { approveImageUpload, rejectImageUpload } from '@/lib/actions/product-image-upload.actions';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { UTApi } from 'uploadthing/server';
+
+const utapi = new UTApi();
 
 export async function POST(
   request: Request,
@@ -82,6 +85,20 @@ export async function DELETE(
 
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Delete the underlying file from UploadThing before removing the record
+    const upload = await prisma.productImageUpload.findUnique({ where: { id } });
+    if (upload) {
+      const match = upload.imageUrl.match(/\/f\/([^/?]+)/);
+      const fileKey = match ? match[1] : null;
+      if (fileKey) {
+        try {
+          await utapi.deleteFiles([fileKey]);
+        } catch (e) {
+          console.error('Failed to delete file from UploadThing:', e);
+        }
+      }
     }
 
     await prisma.productImageUpload.delete({ where: { id } });
