@@ -1008,20 +1008,23 @@ export async function getCrafterDashboardStats(): Promise<{
     const registeredItems = products.length;
     const approvedItems = products.filter(p => p.isActive).length;
 
-    // Calculate sold items and funds due
+    // Sold items = paid order items for this crafter's products
     let soldItems = 0;
-    let fundsDue = 0;
-
     for (const product of products) {
       for (const orderItem of product.orderItems) {
         if (orderItem.order.isPaid) {
           soldItems += orderItem.qty;
-          // Funds due = (price - costPrice) * qty
-          const profitPerItem = product.price - product.costPrice;
-          fundsDue += profitPerItem * orderItem.qty;
         }
       }
     }
+
+    // Funds due = amount still owed to the crafter = sum of their PENDING
+    // crafter payments (cost price allocated when an order is paid, not yet paid out).
+    const pendingPayments = await prisma.crafterPayment.aggregate({
+      where: { crafterId: crafter.id, status: 'PENDING' },
+      _sum: { amount: true },
+    });
+    const fundsDue = pendingPayments._sum.amount || 0;
 
     return {
       success: true,

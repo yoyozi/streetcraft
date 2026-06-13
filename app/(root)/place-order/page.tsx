@@ -12,6 +12,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";
 import PlaceOrderForm from "./place-order-form";
+import DeliveryOptions from "./delivery-options";
 
 export const metadata: Metadata = {
     title: "Place Order",
@@ -67,7 +68,9 @@ const PlaceOrderPage = async() => {
                             </div>
                     </CardContent>
                 </Card>
-                
+
+                <DeliveryOptions selectedAmount={Number(cart.shippingPrice)} />
+
                 <Card>
                     <CardContent className="p-4 gap-4">
                         <h2 className="text-xl pb-4">Items ordered</h2>

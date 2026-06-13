@@ -1,9 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { markCrafterPaymentsPaid } from '@/lib/actions/crafter-payment.actions';
+import { toast } from 'sonner';
 
 interface CrafterPayment {
   id: string;
@@ -37,12 +43,32 @@ const fetcher = async (url: string) => {
 export default function AdminCrafterPaymentDetails({
   crafterId,
 }: CrafterPaymentDetailsProps) {
-  const { data, error, isLoading } = useSWR<{ success: boolean; data: CrafterPayment[] }>(
+  const { data, error, isLoading, mutate } = useSWR<{ success: boolean; data: CrafterPayment[] }>(
     `/api/admin/crafter-payments/${crafterId}`,
     fetcher
   );
 
   const payments = data?.data || [];
+  const [paymentMethod, setPaymentMethod] = useState('EFT');
+  const [reference, setReference] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  const handleMarkPaid = async () => {
+    if (!paymentMethod.trim()) {
+      toast.error('Enter a payment method');
+      return;
+    }
+    setProcessing(true);
+    const res = await markCrafterPaymentsPaid(crafterId, { paymentMethod, reference });
+    if (res.success) {
+      toast.success(res.message || 'Payments marked as paid');
+      setReference('');
+      mutate();
+    } else {
+      toast.error(res.error || 'Failed to mark as paid');
+    }
+    setProcessing(false);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -128,6 +154,34 @@ export default function AdminCrafterPaymentDetails({
           </CardContent>
         </Card>
       </div>
+
+      {/* Record Payout — mark all pending as paid */}
+      {totalPending > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Record Payout</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">
+              Pay the crafter the pending total of <span className="font-semibold">R{totalPending.toFixed(2)}</span>,
+              then record it here to mark all pending payments as <strong>Paid</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+              <div className="space-y-1">
+                <Label htmlFor="method">Payment Method</Label>
+                <Input id="method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="EFT" className="w-40" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="reference">Reference</Label>
+                <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. EFT ref / date" className="w-56" />
+              </div>
+              <Button onClick={handleMarkPaid} disabled={processing} className="bg-green-600 hover:bg-green-700">
+                {processing ? 'Recording...' : `Mark R${totalPending.toFixed(2)} as Paid`}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Payment History */}
       {payments.length === 0 ? (

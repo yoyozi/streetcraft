@@ -2,12 +2,26 @@ import { Order } from "@/types";
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { EFT_BANK_NAME, EFT_ACCOUNT_NUMBER, EFT_BRANCH_CODE, EFT_ACCOUNT_HOLDER } from '@/lib/constants';
 
-type EftPaymentInstructionsProps = {
-  order: Order;
+type BankDetails = {
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  branchCode: string;
 };
 
-export default function EftPaymentInstructionsEmail({ order }: EftPaymentInstructionsProps) {
+type EftPaymentInstructionsProps = {
+  order: Order;
+  bankDetails?: BankDetails;
+};
+
+export default function EftPaymentInstructionsEmail({ order, bankDetails }: EftPaymentInstructionsProps) {
   const ref = order.id.substring(0, 8).toUpperCase();
+
+  // Prefer details from Settings; fall back to env/constant defaults.
+  const bankName = bankDetails?.bankName || EFT_BANK_NAME;
+  const accountHolder = bankDetails?.accountHolder || EFT_ACCOUNT_HOLDER;
+  const accountNumber = bankDetails?.accountNumber || EFT_ACCOUNT_NUMBER;
+  const branchCode = bankDetails?.branchCode || EFT_BRANCH_CODE;
 
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#fff', padding: '20px' }}>
@@ -50,10 +64,10 @@ export default function EftPaymentInstructionsEmail({ order }: EftPaymentInstruc
           <table style={{ width: '100%' }}>
             <tbody>
               {[
-                { label: 'Bank Name', value: EFT_BANK_NAME },
-                { label: 'Account Holder', value: EFT_ACCOUNT_HOLDER },
-                { label: 'Account Number', value: EFT_ACCOUNT_NUMBER },
-                { label: 'Branch Code', value: EFT_BRANCH_CODE },
+                { label: 'Bank Name', value: bankName },
+                { label: 'Account Holder', value: accountHolder },
+                { label: 'Account Number', value: accountNumber },
+                { label: 'Branch Code', value: branchCode },
               ].map(({ label, value }) => (
                 <tr key={label}>
                   <td style={{ width: '40%', padding: '4px 0', fontWeight: 600, color: '#374151' }}>{label}:</td>

@@ -79,3 +79,10 @@ export const EFT_ACCOUNT_NUMBER = process.env.EFT_ACCOUNT_NUMBER || '123456789';
 export const EFT_BRANCH_CODE = process.env.EFT_BRANCH_CODE || '051001';
 export const EFT_ACCOUNT_HOLDER = process.env.EFT_ACCOUNT_HOLDER || 'Ozone Shop (Pty) Ltd';
 
+// Courier guy collection details
+export const COURIERGUY_COLLECTION_STREET = process.env.COURIERGUY_COLLECTION_STREET || '38 Stafford road';
+export const COURIERGUY_COLLECTION_SUBURB = process.env.COURIERGUY_COLLECTION_SUBURB || 'Westdene';
+export const COURIERGUY_COLLECTION_CITY = process.env.COURIERGUY_COLLECTION_CITY || 'Johannesburg';
+export const COURIERGUY_COLLECTION_PROVINCE = process.env.COURIERGUY_COLLECTION_PROVINCE || 'Gauteng';
+export const COURIERGUY_COLLECTION_POSTCODE = process.env.COURIERGUY_COLLECTION_POSTCODE || '2192';
+export const COURIERGUY_COLLECTION_COUNTRY = process.env.COURIERGUY_COLLECTION_COUNTRY || 'ZA';

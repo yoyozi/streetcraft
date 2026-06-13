@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { auth } from "@/auth";
 import { getUserById } from "@/lib/actions/user.actions";
+import { getEnabledPaymentMethods } from "@/lib/actions/settings.actions";
 import PaymentMethodForm from "./payment-method-form";
 import CheckoutSteps from "@/components/shared/checkout-steps";
 
@@ -19,10 +20,15 @@ const PaymentMethodPage = async() => {
 
   if (!user) throw new Error("User not found");
 
+  const availableMethods = await getEnabledPaymentMethods();
+
   return (
     <div>
       <CheckoutSteps current={2} />
-      <PaymentMethodForm preferredPaymentMethod={user.paymentMethod as string | null} />
+      <PaymentMethodForm
+        preferredPaymentMethod={user.paymentMethod as string | null}
+        availableMethods={availableMethods}
+      />
     </div>
   );
 };

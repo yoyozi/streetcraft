@@ -19,15 +19,22 @@ import { ArrowBigRight, Loader } from "lucide-react";
 import { updateUserPaymentMethod } from "@/lib/actions/user.actions";
 import { toast } from "sonner";
 
-const PaymentMethodForm = ({ preferredPaymentMethod }: { preferredPaymentMethod: string | null }) => {
+const PaymentMethodForm = ({ preferredPaymentMethod, availableMethods }: { preferredPaymentMethod: string | null; availableMethods?: string[] }) => {
 
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
+    // Only show gateways the admin has enabled in Settings (falls back to all known).
+    const methods = (availableMethods && availableMethods.length > 0) ? availableMethods : PAYMENT_METHODS;
+    // Default to the preferred method if it's still enabled, else the first enabled method.
+    const defaultType = preferredPaymentMethod && methods.includes(preferredPaymentMethod)
+        ? preferredPaymentMethod
+        : (methods.includes(DEFAULT_PAYMENT_METHOD) ? DEFAULT_PAYMENT_METHOD : methods[0]);
+
     const form = useForm<z.infer<typeof PaymentMethodSchema>>({
             resolver: zodResolver(PaymentMethodSchema),
             defaultValues: {
-                type: preferredPaymentMethod || DEFAULT_PAYMENT_METHOD
+                type: defaultType
             }
         }
     );
@@ -63,7 +70,7 @@ const PaymentMethodForm = ({ preferredPaymentMethod }: { preferredPaymentMethod:
 
                                                 <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-2">
 
-                                                    {PAYMENT_METHODS.map((paymentMethod) => (
+                                                    {methods.map((paymentMethod) => (
                                                         <FormItem key={paymentMethod} className="flex items-center space-x-3">
                                                             <RadioGroupItem value={paymentMethod} />
                                                             <FormLabel className="font-normal">{paymentMethod}</FormLabel>

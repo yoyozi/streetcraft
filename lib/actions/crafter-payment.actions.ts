@@ -265,3 +265,72 @@ export async function getCrafterPaymentHistoryAdmin(crafterId: string): Promise<
     return { success: false, error: 'Failed to get payment history' };
   }
 }
+
+// Mark a crafter's PENDING payments as PAID (admin records a payout).
+// Creates a CrafterPayout grouping and flips all pending payments to PAID.
+export async function markCrafterPaymentsPaid(
+  crafterId: string,
+  options: { paymentMethod: string; reference?: string; notes?: string }
+): Promise<{ success: boolean; message?: string; error?: string; paidCount?: number; total?: number }> {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'admin') {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    if (!options.paymentMethod || !options.paymentMethod.trim()) {
+      return { success: false, error: 'Payment method is required' };
+    }
+
+    const pending = await prisma.crafterPayment.findMany({
+      where: { crafterId, status: 'PENDING' },
+      select: { id: true, amount: true },
+    });
+
+    if (pending.length === 0) {
+      return { success: false, error: 'No pending payments to mark as paid' };
+    }
+
+    const total = pending.reduce((sum, p) => sum + p.amount, 0);
+
+    // Create a payout record grouping these payments
+    const payout = await prisma.crafterPayout.create({
+      data: {
+        crafterId,
+        totalAmount: total,
+        status: 'COMPLETED',
+        paymentMethod: options.paymentMethod.trim(),
+        reference: options.reference?.trim() || null,
+        notes: options.notes?.trim() || null,
+        processedBy: session.user.id,
+        processedAt: new Date(),
+      },
+    });
+
+    await prisma.crafterPayment.updateMany({
+      where: { id: { in: pending.map((p) => p.id) } },
+      data: {
+        status: 'PAID',
+        paymentDate: new Date(),
+        paymentMethod: options.paymentMethod.trim(),
+        reference: options.reference?.trim() || null,
+        payoutId: payout.id,
+      },
+    });
+
+    revalidatePath('/admin/crafter-payments');
+    revalidatePath(`/admin/crafter-payments/${crafterId}`);
+    revalidatePath('/crafter/payments');
+    revalidatePath('/crafter');
+
+    return {
+      success: true,
+      message: `Marked ${pending.length} payment(s) as paid`,
+      paidCount: pending.length,
+      total,
+    };
+  } catch (error) {
+    console.error('Error marking crafter payments paid:', error);
+    return { success: false, error: 'Failed to mark payments as paid' };
+  }
+}

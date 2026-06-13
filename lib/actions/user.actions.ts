@@ -223,6 +223,13 @@ export async function updateUserPaymentMethod(
 
     const paymentMethod = PaymentMethodSchema.parse(data);
 
+    // Enforce that the chosen gateway is currently enabled in Settings.
+    const { getEnabledPaymentMethods } = await import('@/lib/actions/settings.actions');
+    const enabledMethods = await getEnabledPaymentMethods();
+    if (!enabledMethods.includes(paymentMethod.type)) {
+      return { success: false, message: `${paymentMethod.type} is not an available payment method` };
+    }
+
     await prisma.user.update({
       where: { id: session.user.id },
       data: { paymentMethod: paymentMethod.type },

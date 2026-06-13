@@ -77,6 +77,18 @@ export async function createOrder() {
             return {success: false, message: "No payment method", redirectTo: '/payment-method'};
         }
 
+        // Enforce that the order's payment method is currently enabled in Settings
+        // (guards against stale selections after an admin disables a gateway).
+        const { getEnabledPaymentMethods } = await import('@/lib/actions/settings.actions');
+        const enabledMethods = await getEnabledPaymentMethods();
+        if (!enabledMethods.includes(user.paymentMethod)) {
+            return {
+                success: false,
+                message: `${user.paymentMethod} is no longer available — please choose another payment method`,
+                redirectTo: '/payment-method',
+            };
+        }
+
         // create the order object
         const order = insertOrderSchema.parse({
           userId: user.id,
