@@ -37,7 +37,7 @@ export default function ReviewPageClient({ crafters: initial }: { crafters: Pend
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Record<string, string>>({});
 
-  const { data: categories } = useSWR('/api/categories');
+  const { data: categories } = useSWR('/api/categories', (url: string) => fetch(url).then(r => r.json()));
 
   const handleApprove = (id: string) => {
     startTransition(async () => {
