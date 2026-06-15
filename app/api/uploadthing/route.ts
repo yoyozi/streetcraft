@@ -15,3 +15,6 @@ export const { GET, POST } = createRouteHandler({
   router: ourFileRouter,
   ...(callbackUrl ? { config: { callbackUrl } } : {}),
 });
+
+// ADDED BY ME TO FIX UPLOADTHING HANGING
+export const runtime = "nodejs";

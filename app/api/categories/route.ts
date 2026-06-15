@@ -1,4 +1,4 @@
-import { getAllCategories } from '@/lib/actions/product.actions';
+import { getAllCategories } from '@/lib/actions/category.actions';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
