@@ -214,6 +214,7 @@ model Product {
   isFirstPage         Boolean   @default(false)
   isUnique            Boolean   @default(false)
   isActive            Boolean   @default(true)
+  needsCompletion     Boolean   @default(false)
   banner              String?
   tags                String[]
 

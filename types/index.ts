@@ -30,6 +30,11 @@ export type Product = z.infer<typeof insertProductSchema> & {
     createdAt: string;
     images: string[];
     costPrice?: number;
+    weight?: number;
+    height?: number;
+    width?: number;
+    depth?: number;
+    needsCompletion?: boolean;
 };
 
 export type Cart = z.infer<typeof insertCartSchema> 

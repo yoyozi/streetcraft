@@ -325,6 +325,19 @@ export async function approveCrafter(id: string, categoryId?: string) {
       },
     });
 
+    // Convert registration work samples into ProductImageUpload records
+    // so they appear in the crafter's dashboard for them to fill in details
+    if (crafter.workSamples && crafter.workSamples.length > 0) {
+      await prisma.productImageUpload.createMany({
+        data: crafter.workSamples.map((imageUrl) => ({
+          crafterId: crafter.id,
+          imageUrl,
+          status: 'PENDING',
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     // Generate password setup token
     const { randomBytes } = await import('crypto');
     const token = randomBytes(16).toString('hex');

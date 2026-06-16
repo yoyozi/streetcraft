@@ -54,6 +54,8 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
 
   const uploadStatus = data;
   const [uploadedThumbnail, setUploadedThumbnail] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [formDataMap, setFormDataMap] = useState<Record<string, {
     costPrice: string;
     weight: string;
@@ -107,6 +109,8 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
 
   const handleUploadComplete = async (res: { url: string }[]) => {
     const imageUrl = res[0].url;
+    setUploadProgress(null);
+    setUploadingFileName(null);
     setUploadedThumbnail(imageUrl);
     
     try {
@@ -232,7 +236,16 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
             endpoint="crafterProductImage"
             onBeforeUploadBegin={(files) => optimizeImages(files)}
             onClientUploadComplete={handleUploadComplete}
+            onUploadBegin={(fileName) => {
+              setUploadingFileName(fileName);
+              setUploadProgress(0);
+            }}
+            onUploadProgress={(progress) => {
+              setUploadProgress(progress);
+            }}
             onUploadError={(error: Error) => {
+              setUploadProgress(null);
+              setUploadingFileName(null);
               toast.error(`Upload failed: ${error.message}`);
             }}
             config={{
@@ -249,6 +262,23 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
             <p className="text-sm font-medium">
               You can still fill in the details for your uploaded images below.
             </p>
+          </div>
+        )}
+
+        {uploadProgress !== null && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground truncate max-w-[70%]">
+                {uploadingFileName ? `Uploading ${uploadingFileName}...` : 'Uploading...'}
+              </span>
+              <span className="font-medium tabular-nums">{uploadProgress}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-200"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
           </div>
         )}
 

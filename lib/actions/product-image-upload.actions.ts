@@ -146,6 +146,26 @@ export async function getCrafterUploadStatus(): Promise<{
       return { success: false, canUpload: false, remaining: 0, limit: 0, pendingCount: 0, error: 'Crafter not found' };
     }
 
+    // Backfill: create ProductImageUpload records for any workSamples not yet registered
+    if (crafter.workSamples && crafter.workSamples.length > 0) {
+      const existing = await prisma.productImageUpload.findMany({
+        where: { crafterId: crafter.id },
+        select: { imageUrl: true },
+      });
+      const existingUrls = new Set(existing.map((u) => u.imageUrl));
+      const missing = crafter.workSamples.filter((url) => !existingUrls.has(url));
+      if (missing.length > 0) {
+        await prisma.productImageUpload.createMany({
+          data: missing.map((imageUrl) => ({
+            crafterId: crafter.id,
+            imageUrl,
+            status: 'PENDING',
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     const uploadCheck = await canUploadMore(crafter.id);
 
     // Count pending uploads
@@ -271,15 +291,14 @@ export async function approveImageUpload(uploadId: string): Promise<ProductImage
       return { success: false, error: 'Upload not found' };
     }
 
-    // Check if required fields are filled
-    if (!upload.costPrice || !upload.weight || !upload.height || !upload.width || !upload.depth || upload.availability === null) {
-      return { success: false, error: 'Cannot approve: missing required fields (cost, weight, dimensions, availability)' };
-    }
-
     // Use crafter's category if set, otherwise fail
     if (!upload.crafter.categoryId) {
       return { success: false, error: 'Cannot approve: crafter has no category assigned' };
     }
+
+    // Determine if dimensional/cost fields are incomplete — crafter will complete them
+    const missingFields = !upload.costPrice || !upload.weight || !upload.height || !upload.width || !upload.depth;
+    const needsCompletion = missingFields;
 
     // Auto-generate a placeholder product name from crafter's business name
     // Admin must set a proper name and activate the product on the products page
@@ -297,19 +316,20 @@ export async function approveImageUpload(uploadId: string): Promise<ProductImage
       data: {
         name: productName,
         slug,
-        category: upload.crafter.category?.name || 'Uncategorized', // Use crafter's category name
+        category: upload.crafter.category?.name || 'Uncategorized',
         description: upload.description || '',
-        price: upload.costPrice * 1.5, // Default retail price as 1.5x cost (admin can adjust)
-        costPrice: upload.costPrice,
-        weight: upload.weight,
-        height: upload.height,
-        width: upload.width,
-        depth: upload.depth,
-        availability: upload.isUnique ? 1 : upload.availability, // Unique items always have availability 1
+        price: upload.costPrice ? upload.costPrice * 1.5 : 0,
+        costPrice: upload.costPrice || 0,
+        weight: upload.weight || 0,
+        height: upload.height || 0,
+        width: upload.width || 0,
+        depth: upload.depth || 0,
+        availability: upload.isUnique ? 1 : (upload.availability ?? 3),
         isUnique: upload.isUnique,
         images: [upload.imageUrl],
         crafterId: upload.crafterId,
-        isActive: false, // Draft - admin must set name and activate on products page
+        isActive: false,
+        needsCompletion,
       },
     });
 

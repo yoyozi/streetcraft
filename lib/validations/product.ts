@@ -28,6 +28,7 @@ export const insertProductSchema = z.object({
   width: z.coerce.number().min(0).default(0),
   depth: z.coerce.number().min(0).default(0),
   priceNeedsReview: z.boolean().optional().default(false),
+  needsCompletion: z.boolean().optional().default(false),
   lastCostPriceUpdate: z.date().optional().nullable(),
   availability: z.number().int().min(-1, "Availability must be -1 or greater").default(3),
   tags: z.array(z.string().min(1, "Tag cannot be empty").max(30, "Tag must not exceed 30 characters")).max(20, "Maximum 20 tags allowed").default([]),

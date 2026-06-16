@@ -26,10 +26,20 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { startUpload } = useUploadThing('crafterWorkSample');
+  const { startUpload } = useUploadThing('crafterWorkSample', {
+    onUploadBegin(fileName) {
+      setUploadingFileName(fileName);
+      setUploadProgress(0);
+    },
+    onUploadProgress(progress) {
+      setUploadProgress(progress);
+    },
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -53,6 +63,8 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
       toast.error('Upload failed. Please try again.');
     } finally {
       setUploading(false);
+      setUploadProgress(null);
+      setUploadingFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -200,6 +212,22 @@ export default function CrafterRegisterForm({ inviteCode, name, mobile }: Crafte
             >
               {uploading ? 'Uploading...' : `Choose Photo${uploadedImages.length > 0 ? 's' : ''}`}
             </Button>
+            {uploadProgress !== null && (
+              <div className="mt-3 space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span className="truncate max-w-[70%]">
+                    {uploadingFileName ? `Uploading ${uploadingFileName}...` : 'Uploading...'}
+                  </span>
+                  <span className="font-medium tabular-nums">{uploadProgress}%</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

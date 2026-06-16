@@ -150,6 +150,78 @@ function AvailabilityEditor({ product, onUpdate }: { product: Product; onUpdate:
   );
 }
 
+function CompletionForm({ product, onUpdate }: { product: Product; onUpdate: () => void }) {
+  const [form, setForm] = useState({
+    costPrice: product.costPrice ? String(product.costPrice) : '',
+    weight: product.weight ? String(product.weight) : '',
+    height: product.height ? String(product.height) : '',
+    width: product.width ? String(product.width) : '',
+    depth: product.depth ? String(product.depth) : '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!form.costPrice || !form.weight || !form.height || !form.width || !form.depth) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/crafter/products/${product.id}/complete`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Product details saved!');
+        onUpdate();
+      } else {
+        toast.error(data.error || 'Failed to save');
+      }
+    } catch {
+      toast.error('Failed to save');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="mt-4 p-4 rounded-lg border border-amber-300 bg-amber-50 space-y-3">
+      <p className="text-amber-700 font-medium text-sm">⚠ Please complete the missing details for this product</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Cost Price (R)</Label>
+          <Input type="number" placeholder="0.00" value={form.costPrice}
+            onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Weight (kg)</Label>
+          <Input type="number" placeholder="0.0" value={form.weight}
+            onChange={(e) => setForm({ ...form, weight: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Height (cm)</Label>
+          <Input type="number" placeholder="0" value={form.height}
+            onChange={(e) => setForm({ ...form, height: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Width (cm)</Label>
+          <Input type="number" placeholder="0" value={form.width}
+            onChange={(e) => setForm({ ...form, width: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Depth (cm)</Label>
+          <Input type="number" placeholder="0" value={form.depth}
+            onChange={(e) => setForm({ ...form, depth: e.target.value })} />
+        </div>
+      </div>
+      <Button onClick={handleSubmit} disabled={saving} size="sm" className="w-full">
+        {saving ? 'Saving...' : 'Save Details'}
+      </Button>
+    </div>
+  );
+}
+
 export default function CrafterProductsList({ crafterName }: CrafterProductsListProps) {
   // SWR with caching, revalidation, and automatic retries
   const { data, error, isLoading, mutate } = useSWR<{ success: boolean; data: Product[] }>(
@@ -247,6 +319,11 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
                       <Badge variant={availability.variant} className={availability.className}>
                         {availability.label}
                       </Badge>
+                      {product.needsCompletion && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">
+                          Needs completion
+                        </Badge>
+                      )}
                       {product.priceNeedsReview && (
                         <Badge variant="outline" className="border-amber-500 text-amber-600">
                           Pending admin review
@@ -254,8 +331,14 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
                       )}
                     </div>
                   </div>
-                  <CostPriceEditor product={product} onUpdate={() => mutate()} />
-                  <AvailabilityEditor product={product} onUpdate={() => mutate()} />
+                  {product.needsCompletion ? (
+                    <CompletionForm product={product} onUpdate={() => mutate()} />
+                  ) : (
+                    <>
+                      <CostPriceEditor product={product} onUpdate={() => mutate()} />
+                      <AvailabilityEditor product={product} onUpdate={() => mutate()} />
+                    </>
+                  )}
                 </CardContent>
               </Card>
             );
