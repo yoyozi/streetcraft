@@ -44,12 +44,12 @@ const Search = () => {
     };
 
   return (
-    <form onSubmit={handleSubmit}>
-        <div className="flex w-full max-w-sm items-center space-x-2">
+    <form onSubmit={handleSubmit} className="w-full">
+        <div className="flex w-full items-center gap-2">
 
             <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                <SelectTrigger className='w-[180px]'>
-                    <SelectValue placeholder='All Categories'/>
+                <SelectTrigger className='w-[120px] md:w-[160px] shrink-0'>
+                    <SelectValue placeholder='All'/>
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem key='all' value='all'>All</SelectItem>
@@ -66,10 +66,10 @@ const Search = () => {
                 placeholder='Search...'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className='md:w-[100px] lg:w-[300px]'
+                className='flex-1 min-w-0'
             />
 
-            <Button type='submit'>
+            <Button type='submit' size='icon' className='shrink-0'>
                 <SearchIcon />
             </Button>
 

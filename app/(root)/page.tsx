@@ -30,6 +30,14 @@ const HomePage = async () => {
 
         <BannerCarousel banners={banners} />
 
+        <p className="text-center text-muted-foreground text-sm py-3">
+          Local{' '}
+          <a href="/crafters" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            streetcrafters
+          </a>
+          {' '}Internet sales
+        </p>
+
         <ProductList 
             data={latestProducts} 
             title="New Arrivals"

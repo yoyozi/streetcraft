@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import ForgotPasswordForm from "./forgot-password-form";
+import ScLogo from "@/components/shared/sc-logo";
 
 export const metadata: Metadata = {
   title: 'Forgot Password',
@@ -14,9 +15,7 @@ export default function ForgotPasswordPage() {
       <Card>
         <CardHeader className="space-y-4">
           <Link href='/' className="flex-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-              <span className="text-2xl font-bold">SC</span>
-            </div>
+            <ScLogo size="lg" />
           </Link>
           <CardTitle className="text-center">Forgot Password</CardTitle>
           <CardDescription className="text-center">

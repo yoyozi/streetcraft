@@ -18,13 +18,21 @@ const IMAGE_EXTENSIONS = new Set([
  * Returns public URL paths (e.g. `/banners/banner-1.jpg`) sorted by filename in
  * natural/numeric order. Returns an empty array if the folder is missing.
  */
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export function getBanners(): string[] {
   try {
-    return fs
+    const files = fs
       .readdirSync(BANNER_DIR)
       .filter((file) => IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase()))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .map((file) => `/banners/${file}`);
+    return shuffle(files);
   } catch {
     return [];
   }

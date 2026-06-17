@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, SOCIAL_INSTAGRAM, SOCIAL_FACEBOOK } from "@/lib/constants";
 import { Mail, Phone, MapPin, ExternalLink } from 'lucide-react';
 
 const MAPS_URL =
@@ -67,7 +67,23 @@ const Footer = () => {
         {/* Follow Us */}
         <div>
           <h3 className="font-semibold text-sm uppercase tracking-wide mb-4">Follow Us</h3>
-          <p className="text-sm text-muted-foreground italic">Coming soon…</p>
+          <p className="text-sm text-muted-foreground italic mb-3">Coming soon…</p>
+          <div className="flex gap-3">
+            {/* Instagram */}
+            <a href={SOCIAL_INSTAGRAM || '#'} aria-label="Instagram" target={SOCIAL_INSTAGRAM ? '_blank' : undefined} rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                <circle cx="12" cy="12" r="4"/>
+                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+            {/* Facebook */}
+            <a href={SOCIAL_FACEBOOK || '#'} aria-label="Facebook" target={SOCIAL_FACEBOOK ? '_blank' : undefined} rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+          </div>
         </div>
 
       </div>

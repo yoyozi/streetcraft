@@ -2,6 +2,7 @@ import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import Menu from "@/components/shared/header/menu";
 import MainNav from "./main-nav";
+import ScLogo from "@/components/shared/sc-logo";
 
 export default function UserLayout({
     children,
@@ -14,9 +15,7 @@ export default function UserLayout({
                 <div className="border-b container mx-auto">
                     <div className="flex items-center h-16 px-4">
                         <Link href="/" className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                                <span className="text-sm font-bold">SC</span>
-                            </div>
+                            <ScLogo />
                             <span className="text-lg font-bold text-primary">
                                 {APP_NAME}
                             </span>

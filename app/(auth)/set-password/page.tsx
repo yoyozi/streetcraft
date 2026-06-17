@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import Link from "next/link";
 import { validateSetupToken } from "@/lib/actions/password-setup.actions";
 import SetPasswordForm from "./set-password-form";
+import ScLogo from "@/components/shared/sc-logo";
 
 export const metadata: Metadata = {
   title: 'Set Your Password',
@@ -20,9 +21,7 @@ export default async function SetPasswordPage(props: {
         <Card>
           <CardHeader className="space-y-4">
             <Link href="/" className="flex-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                <span className="text-2xl font-bold">SC</span>
-              </div>
+              <ScLogo size="lg" />
             </Link>
             <CardTitle className="text-center">Invalid Link</CardTitle>
             <CardDescription className="text-center">
@@ -42,9 +41,7 @@ export default async function SetPasswordPage(props: {
         <Card>
           <CardHeader className="space-y-4">
             <Link href="/" className="flex-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                <span className="text-2xl font-bold">SC</span>
-              </div>
+              <ScLogo size="lg" />
             </Link>
             <CardTitle className="text-center">Link Expired</CardTitle>
             <CardDescription className="text-center">
@@ -63,9 +60,7 @@ export default async function SetPasswordPage(props: {
       <Card>
         <CardHeader className="space-y-4">
           <Link href="/" className="flex-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-              <span className="text-2xl font-bold">SC</span>
-            </div>
+            <ScLogo size="lg" />
           </Link>
           <CardTitle className="text-center">Set Your Password</CardTitle>
           <CardDescription className="text-center">

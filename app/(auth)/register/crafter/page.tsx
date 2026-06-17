@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import ScLogo from "@/components/shared/sc-logo";
 import { notFound } from "next/navigation";
 import CrafterRegisterForm from "./register-form";
 
@@ -30,9 +31,7 @@ export default async function CrafterRegisterPage(props: {
         <Card>
           <CardHeader className="space-y-4">
             <Link href="/" className="flex-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                <span className="text-2xl font-bold">SC</span>
-              </div>
+              <ScLogo size="lg" />
             </Link>
             <CardTitle className="text-center">Invalid Invite</CardTitle>
             <CardDescription className="text-center">
@@ -50,9 +49,7 @@ export default async function CrafterRegisterPage(props: {
         <Card>
           <CardHeader className="space-y-4">
             <Link href="/" className="flex-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                <span className="text-2xl font-bold">SC</span>
-              </div>
+              <ScLogo size="lg" />
             </Link>
             <CardTitle className="text-center">Application Submitted</CardTitle>
             <CardDescription className="text-center">
@@ -71,9 +68,7 @@ export default async function CrafterRegisterPage(props: {
       <Card>
         <CardHeader className="space-y-4">
           <Link href="/" className="flex-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-              <span className="text-2xl font-bold">SC</span>
-            </div>
+            <ScLogo size="lg" />
           </Link>
           <CardTitle className="text-center">Register as Crafter</CardTitle>
         </CardHeader>

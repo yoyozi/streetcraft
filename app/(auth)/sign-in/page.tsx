@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import CredentialsSignInForm from "./credentials-signin-form";
+import ScLogo from "@/components/shared/sc-logo";
 import { GoogleSignInButton } from "./google-signin-button";
 import { GitHubSignInButton } from "./github-signin-button";
 import { CheckoutSignInPrompt } from "./checkout-signin-prompt";
@@ -39,9 +40,7 @@ export default async function SignInPage(props: {
             <Card>
                 <CardHeader className="space-y-4">
                     <Link href='/' className="flex-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                            <span className="text-2xl font-bold">SC</span>
-                        </div>
+                        <ScLogo size="lg" />
                     </Link>
                     <CardTitle className="text-center">Sign In</CardTitle>
                     <CardDescription className="text-center">

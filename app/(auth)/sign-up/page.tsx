@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import SignUpForm from "./signup-form";
+import ScLogo from "@/components/shared/sc-logo";
 // for the redirect
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -32,9 +33,7 @@ export default async function SignUpPage(props: {
             <Card>
                 <CardHeader className="space-y-4">
                     <Link href='/' className="flex-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-chart-2 text-primary-foreground transition-all hover:scale-105">
-                            <span className="text-2xl font-bold">SC</span>
-                        </div>
+                        <ScLogo size="lg" />
                     </Link>
                     <CardTitle className="text-center">Create an account</CardTitle>
                     <CardDescription className="text-center">
