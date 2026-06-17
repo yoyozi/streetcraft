@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { crafterId: string } }
+  { params }: { params: Promise<{ crafterId: string }> }
 ) {
   try {
     const session = await auth();
@@ -16,7 +16,8 @@ export async function GET(
       );
     }
 
-    const result = await getCrafterPaymentHistoryAdmin(params.crafterId);
+    const { crafterId } = await params;
+    const result = await getCrafterPaymentHistoryAdmin(crafterId);
 
     if (result.success) {
       return NextResponse.json(result);

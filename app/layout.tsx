@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers';
 import PasswordResetGuard from '@/components/shared/password-reset-guard';
+import EnvBanner from '@/components/shared/env-banner';
 
 
 const inter = Inter({ subsets: ['latin'] });
@@ -41,6 +42,7 @@ export default function RootLayout({
               defaultTheme='system'
               enableSystem
               disableTransitionOnChange>
+              <EnvBanner />
               <PasswordResetGuard>
                 <main className="min-h-screen">
                   {children}

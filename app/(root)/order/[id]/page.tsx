@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import OrderDetailsTable from "./order-details-table";
 import { ShippingAddress } from "@/types";
 import { auth } from "@/auth";
+import { getPaymentSettings } from "@/lib/actions/settings.actions";
 
 export const metadata: Metadata = {
     title: "Order Details",
@@ -32,6 +33,7 @@ const OrderDetailsPage = async (props: {
     // have these details and show or not show the det paid/delivered buttons if admin or not
     // so we pass it in as a prop
     const session = await auth();
+    const paymentSettings = await getPaymentSettings();
 
   return (
       <OrderDetailsTable 
@@ -43,6 +45,12 @@ const OrderDetailsPage = async (props: {
         }
 
         isAdmin={ session?.user?.role === 'admin' || false }
+        eftBankDetails={{
+            bankName: paymentSettings.eftBankName,
+            accountHolder: paymentSettings.eftAccountHolder,
+            accountNumber: paymentSettings.eftAccountNumber,
+            branchCode: paymentSettings.eftBranchCode,
+        }}
       />
   );
 };

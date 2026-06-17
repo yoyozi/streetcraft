@@ -24,10 +24,13 @@ export const signUpDefaultValues = {
 
 export const shippingAddressDefaultValues = { 
     fullName: '',
+    phone: '',
     streetAddress: '',
+    suburb: '',
     city: '',
+    province: '',
     postalCode: '',
-    country: '',
+    country: 'ZA',
 };
 
 export const productDefaultValues = {

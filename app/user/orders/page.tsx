@@ -50,7 +50,11 @@ const OrdersPage = async (
                   <TableCell>{formatDateTime(order.createdAt).dateTime}</TableCell>
                   <TableCell>{formatCurrency(order.totalPrice)}</TableCell>
                   <TableCell>{order.isPaid && order.paidAt ? formatDateTime(order.paidAt).dateTime : 'Not paid'}</TableCell>
-                  <TableCell>{order.isDelivered && order.deliveredAt ? formatDateTime(order.deliveredAt).dateTime : 'Not delivered'}</TableCell>
+                  <TableCell>
+                    {order.isDelivered && order.deliveredAt
+                      ? formatDateTime(order.deliveredAt).dateTime
+                      : (order as any).courierStatus || 'Pending'}
+                  </TableCell>
                   <TableCell>
                     <Link href={`/order/${order.id}`}><span className="px-2">Details</span></Link>
                   </TableCell>

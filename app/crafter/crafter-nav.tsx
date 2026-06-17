@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Wallet } from "lucide-react";
+import { LayoutDashboard, Wallet, Settings } from "lucide-react";
 
 const CrafterNav = () => {
     return (
@@ -18,6 +18,11 @@ const CrafterNav = () => {
                     <Link href="/crafter/payments">
                         <Button variant="ghost">
                             <Wallet className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                    <Link href="/crafter/settings">
+                        <Button variant="ghost">
+                            <Settings className="h-5 w-5" />
                         </Button>
                     </Link>
                 </div>

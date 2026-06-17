@@ -1,4 +1,5 @@
 // email/index.tsx
+import React from 'react';
 import nodemailer from 'nodemailer';
 import { APP_NAME } from "@/lib/constants";
 // because we are not in the app folder we need to get the .env via the dotenv package
@@ -40,18 +41,26 @@ function getSenderEmail() {
 interface EmailOptions {
   to: string;
   subject: string;
-  html: string;
+  html?: string;
+  react?: React.ReactElement;
   // Optional: Add other options like cc, bcc, etc.
 }
 
-export const SendEmail = async ({ to, subject, html }: EmailOptions) => {
+export const SendEmail = async ({ to, subject, html, react }: EmailOptions) => {
+  let htmlContent = html ?? '';
+  if (react) {
+    // Dynamic require avoids Next.js App Router static-analysis rejection of react-dom/server
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { renderToStaticMarkup } = require('react-dom/server');
+    htmlContent = renderToStaticMarkup(react);
+  }
   try {
     const senderEmail = getSenderEmail();
     await getTransporter().sendMail({
       from: `${APP_NAME} <${senderEmail}>`,
       to,
       subject,
-      html,
+      html: htmlContent,
     });
     console.log(`Email sent successfully to ${to}`);
   } catch (error) {

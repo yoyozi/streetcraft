@@ -133,6 +133,12 @@ model Crafter {
   approvedAt       DateTime?
   rejectedReason   String?
 
+  // Banking details for payouts
+  bankName         String?
+  bankAccountNumber String?
+  bankBranchCode   String?
+  bankAccountType  String?   @default("Cheque")
+
   // Relations
   products Product[]
   imageUploads ProductImageUpload[]
@@ -269,15 +275,16 @@ model ProductImageUpload {
 }
 
 model Cart {
-  id            String     @id @default(cuid())
-  userId        String?
-  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionCartId String
-  items         CartItem[]
-  itemsPrice    Float      @default(0)
-  totalPrice    Float      @default(0)
-  shippingPrice Float      @default(0)
-  taxPrice      Float      @default(0)
+  id                  String     @id @default(cuid())
+  userId              String?
+  user                User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionCartId       String
+  items               CartItem[]
+  itemsPrice          Float      @default(0)
+  totalPrice          Float      @default(0)
+  shippingPrice       Float      @default(0)
+  shippingServiceCode String?
+  taxPrice            Float      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -314,12 +321,16 @@ model Order {
   totalPrice      Float
   totalPriceUsd   Float?
   exchangeRate    Float?
-  eftEmailSent    Boolean   @default(false)
-  eftEmailSentAt  DateTime?
-  isPaid          Boolean   @default(false)
-  paidAt          DateTime?
-  isDelivered     Boolean   @default(false)
-  deliveredAt     DateTime?
+  eftEmailSent        Boolean   @default(false)
+  eftEmailSentAt      DateTime?
+  shippingServiceCode String?
+  waybillNumber       String?
+  trackingNumber      String?
+  courierStatus       String?
+  isPaid              Boolean   @default(false)
+  paidAt              DateTime?
+  isDelivered         Boolean   @default(false)
+  deliveredAt         DateTime?
 
   // Relations
   orderItems OrderItem[]

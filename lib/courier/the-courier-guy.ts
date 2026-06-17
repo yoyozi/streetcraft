@@ -1,11 +1,12 @@
 /**
- * The Courier Guy (Shiplogic) API client — delivery rate quotes.
+ * The Courier Guy (Shiplogic) API client — delivery rate quotes and shipment booking.
  *
- * The Courier Guy exposes the Shiplogic API. This module wraps the "rates"
- * endpoint to get a realtime delivery price for a cart/order.
+ * The Courier Guy exposes the Shiplogic API. This module wraps:
+ *  - POST /v2/rates       — realtime delivery price for a cart/order
+ *  - POST /v2/shipments   — book a shipment after payment (generates waybill + tracking)
  *
  * ⚠️ VERIFY AGAINST YOUR LIVE DOCS / KEY (https://thecourierguy.co.za/api-docs/):
- *  - Base URL and endpoint path (assumed: POST {BASE}/v2/rates)
+ *  - Base URL and endpoint path
  *  - Auth header (assumed: `Authorization: Bearer <API_KEY>`)
  *  - Exact request/response field names (based on the Shiplogic schema)
  * The shapes below match the documented Shiplogic API; adjust if your account differs.
@@ -31,6 +32,7 @@ export interface CourierAddress {
   country: string; // ISO-2, e.g. "ZA"
   /** postal code */
   code: string;
+  phone?: string;
 }
 
 export interface CourierParcel {
@@ -79,6 +81,7 @@ function toShiplogicAddress(a: CourierAddress) {
     zone: a.zone || '',
     country: a.country || 'ZA',
     code: a.code,
+    phone: a.phone || '',
   };
 }
 
@@ -146,5 +149,95 @@ export async function getCourierRates(req: CourierRateRequest): Promise<CourierR
   } catch (error) {
     console.error('Courier rate request failed:', error);
     return { success: false, rates: [], error: 'Failed to reach courier API' };
+  }
+}
+
+export interface CourierContact {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+export interface ShipmentRequest {
+  collectionAddress: CourierAddress;
+  collectionContact: CourierContact;
+  deliveryAddress: CourierAddress;
+  deliveryContact: CourierContact;
+  parcels: CourierParcel[];
+  serviceLevelCode: string;
+  declaredValue?: number;
+  customerReference?: string;
+  specialInstructionsCollection?: string;
+  specialInstructionsDelivery?: string;
+}
+
+export interface ShipmentResult {
+  success: boolean;
+  shipmentId?: string;
+  waybillNumber?: string;
+  trackingNumber?: string;
+  error?: string;
+  raw?: unknown;
+}
+
+/**
+ * Book a shipment with Shiplogic after payment is confirmed.
+ * Returns waybill and tracking numbers to store on the order.
+ * Never throws — returns { success:false, error } on failure.
+ */
+export async function createShipment(req: ShipmentRequest): Promise<ShipmentResult> {
+  if (!COURIER_API_KEY) {
+    return { success: false, error: 'COURIERGUY_API_KEY is not configured' };
+  }
+
+  try {
+    const body = {
+      collection_address: toShiplogicAddress(req.collectionAddress),
+      collection_contact: {
+        name: req.collectionContact.name,
+        mobile_number: req.collectionContact.phone,
+        email: req.collectionContact.email ?? '',
+      },
+      delivery_address: toShiplogicAddress(req.deliveryAddress),
+      delivery_contact: {
+        name: req.deliveryContact.name,
+        mobile_number: req.deliveryContact.phone,
+        email: req.deliveryContact.email ?? '',
+      },
+      parcels: req.parcels.map(toShiplogicParcel),
+      service_level_code: req.serviceLevelCode,
+      declared_value: req.declaredValue ?? 0,
+      customer_reference: req.customerReference ?? '',
+      special_instructions_collection: req.specialInstructionsCollection ?? '',
+      special_instructions_delivery: req.specialInstructionsDelivery ?? '',
+    };
+
+    const res = await fetch(`${COURIER_API_URL}/v2/shipments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${COURIER_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      return { success: false, error: `Courier API ${res.status}: ${text.slice(0, 300)}` };
+    }
+
+    const data = await res.json();
+
+    return {
+      success: true,
+      shipmentId: data?.id ?? undefined,
+      waybillNumber: data?.waybill_number ?? data?.short_tracking_reference ?? undefined,
+      trackingNumber: data?.tracking_reference ?? data?.short_tracking_reference ?? undefined,
+      raw: data,
+    };
+  } catch (error) {
+    console.error('Courier shipment booking failed:', error);
+    return { success: false, error: 'Failed to reach courier API' };
   }
 }

@@ -112,6 +112,7 @@ export async function createOrder() {
                     shippingPrice: Number(order.shippingPrice),
                     taxPrice: Number(order.taxPrice),
                     totalPrice: Number(order.totalPrice),
+                    shippingServiceCode: (cart as any).shippingServiceCode ?? null,
                 },
             });
 
@@ -221,6 +222,10 @@ export async function getOrderById(orderId: string): Promise<OrderType | null> {
         exchangeRate: data.exchangeRate?.toString(),
         eftEmailSent: data.eftEmailSent,
         eftEmailSentAt: data.eftEmailSentAt,
+        shippingServiceCode: (data as any).shippingServiceCode ?? null,
+        waybillNumber: (data as any).waybillNumber ?? null,
+        trackingNumber: (data as any).trackingNumber ?? null,
+        courierStatus: (data as any).courierStatus ?? null,
         paymentMethod: data.paymentMethod,
         shippingAddress: data.shippingAddress as unknown as ShippingAddress,
         paymentResult: data.paymentResult as unknown as PaymentResult,
@@ -555,6 +560,15 @@ export async function updateOrderToPaid({
       // Don't throw - we don't want payment creation to break the order payment flow
     }
 
+    // Book shipment with Shiplogic to generate waybill + tracking number
+    try {
+      const { bookOrderShipment } = await import('@/lib/actions/courier.actions');
+      await bookOrderShipment(orderId);
+    } catch (error) {
+      console.error('Failed to book shipment:', error);
+      // Don't throw - shipment booking failure must not break the payment confirmation
+    }
+
     // Get the updated order with items and user for email
     const updatedOrder = await prisma.order.findUnique({
       where: { id: orderId },
@@ -635,27 +649,29 @@ type SalesDataType = {
 export async function getOrderSummary() {
     // get the counts for the 4 resources
     const [ordersCount, usersCount, productsCount, productsNeedingReview] = await Promise.all([
-      prisma.order.count(),
+      prisma.order.count({ where: { isPaid: true } }),
       prisma.user.count({ where: { role: 'user' } }),
       prisma.product.count(),
       prisma.product.count({ where: { priceNeedsReview: true } })
     ]);
 
-    // calc total sales using Prisma aggregate
+    // calc total sales using Prisma aggregate — paid orders only
     const totalSalesResult = await prisma.order.aggregate({
+      where: { isPaid: true },
       _sum: { totalPrice: true },
     });
     const totalSalesAmount = totalSalesResult._sum.totalPrice || 0;
 
-    // get all orders for monthly grouping
+    // get paid orders for monthly grouping
     const allOrders = await prisma.order.findMany({
-      select: { createdAt: true, totalPrice: true },
+      where: { isPaid: true },
+      select: { paidAt: true, totalPrice: true },
     });
 
     // Group by month manually (Prisma doesn't have dateToString like Mongo)
     const monthlyMap = new Map<string, number>();
     allOrders.forEach(o => {
-      const d = new Date(o.createdAt);
+      const d = new Date(o.paidAt ?? o.createdAt ?? new Date());
       const month = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
       monthlyMap.set(month, (monthlyMap.get(month) || 0) + Number(o.totalPrice));
     });
@@ -664,9 +680,10 @@ export async function getOrderSummary() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, totalSales]) => ({ month, totalSales }));
 
-    // get latest sales
+    // get latest paid orders
     const latestOrders = await prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
+      where: { isPaid: true },
+      orderBy: { paidAt: 'desc' },
       take: 6,
       select: { id: true, createdAt: true, totalPrice: true, userId: true, user: { select: { name: true } } },
     });
@@ -778,7 +795,7 @@ export async function deliverOrder(orderId: string) {
 
     await prisma.order.update({
       where: { id: orderId },
-      data: { isDelivered: true, deliveredAt: new Date() },
+      data: { isDelivered: true, deliveredAt: new Date(), courierStatus: 'Delivered' },
     });
 
     revalidatePath(`/order/${orderId}`);

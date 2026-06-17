@@ -42,7 +42,7 @@ export default function DeliveryOptions({ selectedAmount }: { selectedAmount: nu
 
   const applyRate = async (rate: CourierRate, silent = false) => {
     setApplying(rate.code);
-    const res = await setCartShippingRate(rate.amount);
+    const res = await setCartShippingRate(rate.amount, rate.code);
     if (res.success) {
       if (!silent) toast.success(`Delivery: ${rate.name} — ${formatCurrency(rate.amount)}`);
       router.refresh();

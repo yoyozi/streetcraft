@@ -28,6 +28,16 @@ interface CrafterPayment {
   };
 }
 
+interface CrafterInfo {
+  businessName: string;
+  mobile: string;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankBranchCode: string | null;
+  bankAccountType: string | null;
+  user: { name: string; email: string };
+}
+
 interface CrafterPaymentDetailsProps {
   crafterId: string;
 }
@@ -43,12 +53,13 @@ const fetcher = async (url: string) => {
 export default function AdminCrafterPaymentDetails({
   crafterId,
 }: CrafterPaymentDetailsProps) {
-  const { data, error, isLoading, mutate } = useSWR<{ success: boolean; data: CrafterPayment[] }>(
+  const { data, error, isLoading, mutate } = useSWR<{ success: boolean; data: CrafterPayment[]; crafter: CrafterInfo | null }>(
     `/api/admin/crafter-payments/${crafterId}`,
     fetcher
   );
 
   const payments = data?.data || [];
+  const crafter = data?.crafter || null;
   const [paymentMethod, setPaymentMethod] = useState('EFT');
   const [reference, setReference] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -119,6 +130,35 @@ export default function AdminCrafterPaymentDetails({
 
   return (
     <div className="space-y-6">
+      {/* Crafter Banking Details */}
+      {crafter && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">
+              {crafter.businessName} — {crafter.user.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
+              <div><span className="text-muted-foreground">Mobile:</span> {crafter.mobile}</div>
+              <div><span className="text-muted-foreground">Email:</span> {crafter.user.email}</div>
+            </div>
+            {crafter.bankName ? (
+              <div className="mt-3 p-3 bg-muted rounded-md grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                <div><span className="text-muted-foreground">Bank:</span> <strong>{crafter.bankName}</strong></div>
+                <div><span className="text-muted-foreground">Account type:</span> {crafter.bankAccountType}</div>
+                <div><span className="text-muted-foreground">Account no:</span> <strong className="font-mono">{crafter.bankAccountNumber}</strong></div>
+                <div><span className="text-muted-foreground">Branch code:</span> <span className="font-mono">{crafter.bankBranchCode}</span></div>
+              </div>
+            ) : (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                ⚠ Banking details not yet provided by this crafter. Ask them to add their details via their dashboard → Settings.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

@@ -73,8 +73,8 @@ export async function initializePaystackTransaction({
       };
     }
 
-    console.error('[PAYSTACK] Response status is false:', response);
-    throw new Error('Failed to initialize Paystack transaction');
+    console.error('[PAYSTACK] Response status is false:', JSON.stringify(response, null, 2));
+    throw new Error(`Paystack error: ${(response as any).message || JSON.stringify(response)}`);
   } catch (error) {
     console.error('[PAYSTACK] Initialize transaction error:', error);
     throw error;

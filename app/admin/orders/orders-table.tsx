@@ -21,6 +21,7 @@ type Order = {
   paidAt: Date | null;
   isDelivered: boolean;
   deliveredAt: Date | null;
+  courierStatus?: string | null;
   paymentMethod: string;
   paymentResult: unknown;
 };
@@ -163,8 +164,8 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
               </TableCell>
               <TableCell>
                 {order.isDelivered && order.deliveredAt
-                  ? formatDateTime(order.deliveredAt).dateTime
-                  : 'Not Delivered'}
+                  ? `Delivered ${formatDateTime(order.deliveredAt).dateTime}`
+                  : order.courierStatus || 'Pending'}
               </TableCell>
               <TableCell className="flex gap-1">
                 <Button asChild variant="outline" size="sm">

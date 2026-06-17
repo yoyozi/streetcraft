@@ -4,6 +4,67 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 
+// Get crafter's banking details (crafter-facing)
+export async function getCrafterBankDetails(): Promise<{
+  success: boolean;
+  data?: {
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    bankBranchCode: string | null;
+    bankAccountType: string | null;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'craft') return { success: false, error: 'Unauthorized' };
+
+    const crafter = await prisma.crafter.findUnique({
+      where: { userId: session.user.id },
+      select: { bankName: true, bankAccountNumber: true, bankBranchCode: true, bankAccountType: true },
+    });
+
+    if (!crafter) return { success: false, error: 'Crafter not found' };
+    return { success: true, data: crafter as any };
+  } catch (error) {
+    console.error('Error getting bank details:', error);
+    return { success: false, error: 'Failed to get bank details' };
+  }
+}
+
+// Save/update crafter's banking details
+export async function updateCrafterBankDetails(data: {
+  bankName: string;
+  bankAccountNumber: string;
+  bankBranchCode: string;
+  bankAccountType: string;
+}): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'craft') return { success: false, error: 'Unauthorized' };
+
+    if (!data.bankName.trim() || !data.bankAccountNumber.trim() || !data.bankBranchCode.trim()) {
+      return { success: false, error: 'Bank name, account number, and branch code are required' };
+    }
+
+    await prisma.crafter.update({
+      where: { userId: session.user.id },
+      data: {
+        bankName: data.bankName.trim(),
+        bankAccountNumber: data.bankAccountNumber.trim(),
+        bankBranchCode: data.bankBranchCode.trim(),
+        bankAccountType: data.bankAccountType.trim() || 'Cheque',
+      },
+    });
+
+    revalidatePath('/crafter/settings');
+    return { success: true, message: 'Banking details saved' };
+  } catch (error) {
+    console.error('Error updating bank details:', error);
+    return { success: false, error: 'Failed to save banking details' };
+  }
+}
+
 // Create crafter payments when an order is paid
 export async function createCrafterPaymentsForOrder(orderId: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
@@ -229,6 +290,7 @@ export async function getAllCrafterPaymentSummaries(): Promise<{
 export async function getCrafterPaymentHistoryAdmin(crafterId: string): Promise<{
   success: boolean;
   data?: any[];
+  crafter?: any;
   error?: string;
 }> {
   try {
@@ -238,27 +300,35 @@ export async function getCrafterPaymentHistoryAdmin(crafterId: string): Promise<
       return { success: false, error: 'Unauthorized' };
     }
 
-    const payments = await prisma.crafterPayment.findMany({
-      where: { crafterId },
-      include: {
-        payout: {
-          select: {
-            id: true,
-            reference: true,
-            processedAt: true,
-            status: true,
+    const [crafter, payments] = await Promise.all([
+      prisma.crafter.findUnique({
+        where: { id: crafterId },
+        select: {
+          businessName: true,
+          mobile: true,
+          bankName: true,
+          bankAccountNumber: true,
+          bankBranchCode: true,
+          bankAccountType: true,
+          user: { select: { name: true, email: true } },
+        },
+      }),
+      prisma.crafterPayment.findMany({
+        where: { crafterId },
+        include: {
+          payout: {
+            select: { id: true, reference: true, processedAt: true, status: true },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 100,
-    });
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+    ]);
 
     return {
       success: true,
       data: payments,
+      crafter,
     };
   } catch (error) {
     console.error('Error getting crafter payment history:', error);

@@ -61,6 +61,10 @@ export type Order = z.infer<typeof insertOrderSchema> & {
     exchangeRate?: string;   // Exchange rate used at payment time
     eftEmailSent?: boolean;  // Track if EFT payment instructions were sent
     eftEmailSentAt?: Date | null;  // When EFT instructions were sent
+    shippingServiceCode?: string | null;
+    waybillNumber?: string | null;
+    trackingNumber?: string | null;
+    courierStatus?: string | null;
 };
 
 export type OrderItem = z.infer<typeof insertOrderItemSchema>;

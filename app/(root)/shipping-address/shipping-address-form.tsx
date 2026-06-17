@@ -17,8 +17,10 @@ import { FormLabel } from "@/components/ui/form";
 import { FormControl } from "@/components/ui/form";
 import { FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowBigRight, Loader } from "lucide-react";
 import { updateUserAddress } from "@/lib/actions/user.actions";
+import { COUNTRIES } from "@/lib/constants/countries";
 
 
 const ShippingAddressForm = ({ address }: { address: ShippingAddress }) => {
@@ -26,10 +28,15 @@ const ShippingAddressForm = ({ address }: { address: ShippingAddress }) => {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
-    // we use the default values if user had values
+    // Normalise country to ISO-2 code so the Select always has a valid match.
+    // Existing addresses stored as full name (e.g. "South Africa") won't match any option — default to 'ZA'.
+    const normalisedAddress = address
+        ? { ...address, country: address.country?.length === 2 ? address.country : 'ZA' }
+        : shippingAddressDefaultValues;
+
     const form = useForm<z.infer<typeof ShippingAddressSchema>>({
         resolver: zodResolver(ShippingAddressSchema),
-        defaultValues: address || shippingAddressDefaultValues,
+        defaultValues: normalisedAddress,
     });
 
     const onSubmit: SubmitHandler<z.infer<typeof ShippingAddressSchema>> = async (values: z.infer<typeof ShippingAddressSchema>) => {
@@ -71,6 +78,21 @@ const ShippingAddressForm = ({ address }: { address: ShippingAddress }) => {
                         <div className="flex flex-col md:flex-row gap-5">
                             <FormField
                                 control={form.control}
+                                name="phone"
+                                render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'phone'> }) => (
+                                    <FormItem>
+                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. +27 82 123 4567" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />           
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-5">
+                            <FormField
+                                control={form.control}
                                 name="streetAddress"
                                 render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'streetAddress'> }) => (
                                     <FormItem>
@@ -86,12 +108,42 @@ const ShippingAddressForm = ({ address }: { address: ShippingAddress }) => {
                         <div className="flex flex-col md:flex-row gap-5">
                             <FormField
                                 control={form.control}
+                                name="suburb"
+                                render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'suburb'> }) => (
+                                    <FormItem>
+                                        <FormLabel>Suburb</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Enter your suburb" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />           
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-5">
+                            <FormField
+                                control={form.control}
                                 name="city"
                                 render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'city'> }) => (
                                     <FormItem>
                                         <FormLabel>City</FormLabel>
                                         <FormControl>
                                             <Input placeholder="Enter your city" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />           
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-5">
+                            <FormField
+                                control={form.control}
+                                name="province"
+                                render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'province'> }) => (
+                                    <FormItem>
+                                        <FormLabel>State / Province / Region</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. Gauteng, California, Ontario" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -120,9 +172,20 @@ const ShippingAddressForm = ({ address }: { address: ShippingAddress }) => {
                                 render={({ field }: { field: ControllerRenderProps<z.infer<typeof ShippingAddressSchema>, 'country'> }) => (
                                     <FormItem>
                                         <FormLabel>Country</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Enter your country" {...field} />
-                                        </FormControl>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select your country" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent className="max-h-72 overflow-y-auto">
+                                                {COUNTRIES.map((c) => (
+                                                    <SelectItem key={c.code} value={c.code}>
+                                                        {c.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}

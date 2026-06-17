@@ -31,6 +31,7 @@ const AdminOrdersPage = async (props: { searchParams: Promise<{ page: string; qu
     paidAt: order.paidAt,
     isDelivered: order.isDelivered,
     deliveredAt: order.deliveredAt,
+    courierStatus: (order as any).courierStatus ?? null,
     paymentMethod: order.paymentMethod,
     paymentResult: order.paymentResult,
   }));

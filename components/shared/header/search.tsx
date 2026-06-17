@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { SearchIcon } from 'lucide-react';
 
 interface Category {
-    category: string;
+    id: string;
+    name: string;
 }
 
 const Search = () => {
@@ -21,7 +22,7 @@ const Search = () => {
         // Fetch categories on mount
         fetch('/api/categories')
             .then(res => res.json())
-            .then(data => setCategories(data))
+            .then(data => setCategories(Array.isArray(data) ? data : (data?.data ?? [])))
             .catch(err => console.error('Failed to load categories:', err));
     }, []);
 
@@ -53,8 +54,8 @@ const Search = () => {
                 <SelectContent>
                     <SelectItem key='all' value='all'>All</SelectItem>
                     {categories.map((x) => (
-                        <SelectItem key={x.category} value={x.category}>
-                            {x.category}
+                        <SelectItem key={x.id} value={x.name}>
+                            {x.name}
                         </SelectItem>
                     ))}
                 </SelectContent>

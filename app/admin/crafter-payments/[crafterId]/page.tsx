@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 export default async function AdminCrafterPaymentDetailsPage({
   params,
 }: {
-  params: { crafterId: string };
+  params: Promise<{ crafterId: string }>;
 }) {
   await verifyAdmin();
+  const { crafterId } = await params;
 
   return (
     <div className='space-y-6'>
@@ -25,7 +26,7 @@ export default async function AdminCrafterPaymentDetailsPage({
         </Link>
         <h1 className='text-2xl font-bold'>Payment Details</h1>
       </div>
-      <AdminCrafterPaymentDetails crafterId={params.crafterId} />
+      <AdminCrafterPaymentDetails crafterId={crafterId} />
     </div>
   );
 }

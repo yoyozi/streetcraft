@@ -30,20 +30,28 @@ import {
 import { toast } from "sonner";
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { EFT_BANK_NAME, EFT_ACCOUNT_NUMBER, EFT_BRANCH_CODE, EFT_ACCOUNT_HOLDER } from "@/lib/constants";
 import { useRouter, useSearchParams } from "next/navigation";
 
 
 
     // We have to pass the paypalClientId in the prop as we cannot access .env as its clientside
+type EftBankDetails = {
+    bankName: string;
+    accountHolder: string;
+    accountNumber: string;
+    branchCode: string;
+};
+
 const OrderDetailsTable = ({ 
         order, 
         paypalClientId, 
-        isAdmin 
+        isAdmin,
+        eftBankDetails,
     }: { 
         order: Order, 
         paypalClientId: string, 
-        isAdmin: boolean 
+        isAdmin: boolean,
+        eftBankDetails?: EftBankDetails,
     }) => {
 
     const router = useRouter();
@@ -63,7 +71,10 @@ const OrderDetailsTable = ({
         isDelivered,
         isPaid,
         paidAt,
-        deliveredAt } = order;
+        deliveredAt,
+        waybillNumber,
+        trackingNumber,
+        courierStatus } = order;
 
     // Track if verification has been attempted to prevent multiple calls
     const [verificationAttempted, setVerificationAttempted] = React.useState(false);
@@ -300,10 +311,28 @@ const OrderDetailsTable = ({
                             <Badge variant="secondary">
                                 Delivered at {formatDateTime(deliveredAt!).dateTime}
                             </Badge>
-                        ) : (
-                            <Badge variant="destructive">
-                                Not Delivered
+                        ) : courierStatus ? (
+                            <Badge variant="outline" className="border-blue-400 text-blue-700">
+                                {courierStatus}
                             </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                                Awaiting collection
+                            </Badge>
+                        )}
+                        {(waybillNumber || trackingNumber) && (
+                            <div className="mt-3 p-3 bg-muted rounded-md space-y-1 text-sm">
+                                <p className="font-medium">Courier Booking</p>
+                                {courierStatus && (
+                                    <p>Status: <span className="font-semibold">{courierStatus}</span></p>
+                                )}
+                                {waybillNumber && (
+                                    <p>Waybill: <span className="font-semibold">{waybillNumber}</span></p>
+                                )}
+                                {trackingNumber && (
+                                    <p>Tracking: <span className="font-semibold">{trackingNumber}</span></p>
+                                )}
+                            </div>
                         )}
 
                     </CardContent>
@@ -374,19 +403,19 @@ const OrderDetailsTable = ({
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-gray-700 font-medium">Bank:</span>
-                                        <span className="font-semibold">{EFT_BANK_NAME}</span>
+                                        <span className="font-semibold">{eftBankDetails?.bankName}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-700 font-medium">Account Holder:</span>
-                                        <span className="font-semibold">{EFT_ACCOUNT_HOLDER}</span>
+                                        <span className="font-semibold">{eftBankDetails?.accountHolder}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-700 font-medium">Account Number:</span>
-                                        <span className="font-bold text-base">{EFT_ACCOUNT_NUMBER}</span>
+                                        <span className="font-bold text-base">{eftBankDetails?.accountNumber}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-700 font-medium">Branch Code:</span>
-                                        <span className="font-semibold">{EFT_BRANCH_CODE}</span>
+                                        <span className="font-semibold">{eftBankDetails?.branchCode}</span>
                                     </div>
                                     <div className="flex justify-between border-t border-blue-300 pt-2 mt-2">
                                         <span className="text-gray-700 font-medium">Reference:</span>
@@ -425,7 +454,7 @@ const OrderDetailsTable = ({
                                         <img 
                                             src="/images/paystack.svg" 
                                             alt="Paystack" 
-                                            className="h-6 w-auto"
+                                            className="h-10 w-auto"
                                         />
                                     </span>
                                 </Button>
@@ -450,7 +479,7 @@ const OrderDetailsTable = ({
                                         <img 
                                             src="/images/yoco.svg" 
                                             alt="Yoco" 
-                                            className="h-6 w-auto"
+                                            className="h-10 w-auto"
                                         />
                                     </span>
                                 </Button>

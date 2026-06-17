@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { getCourierRates, CourierAddress, CourierParcel, CourierRate } from '@/lib/courier/the-courier-guy';
+import { getCourierRates, createShipment, CourierAddress, CourierParcel, CourierRate } from '@/lib/courier/the-courier-guy';
 import { getMyCart } from '@/lib/actions/cart.actions';
 import { getUserById } from '@/lib/actions/user.actions';
 import type { ShippingAddress } from '@/lib/validations/order';
@@ -30,9 +30,12 @@ function shippingToCourierAddress(a: ShippingAddress): CourierAddress {
   return {
     type: 'residential',
     streetAddress: a.streetAddress,
+    localArea: a.suburb || '',
     city: a.city,
+    zone: a.province || '',
     country: a.country?.length === 2 ? a.country : 'ZA',
     code: a.postalCode,
+    phone: a.phone || '',
   };
 }
 
@@ -128,9 +131,9 @@ export async function getCartDeliveryQuotes(): Promise<DeliveryQuoteResult> {
 }
 
 /**
- * Apply a chosen delivery rate to the current cart (updates shipping + total).
+ * Apply a chosen delivery rate to the current cart (updates shipping + total + service code).
  */
-export async function setCartShippingRate(amount: number): Promise<{ success: boolean; error?: string }> {
+export async function setCartShippingRate(amount: number, serviceCode: string): Promise<{ success: boolean; error?: string }> {
   try {
     const sessionCartId = (await cookies()).get('sessionCartId')?.value;
     const session = await auth();
@@ -146,7 +149,7 @@ export async function setCartShippingRate(amount: number): Promise<{ success: bo
 
     await prisma.cart.update({
       where: { id: cart.id },
-      data: { shippingPrice: shipping, totalPrice: total },
+      data: { shippingPrice: shipping, shippingServiceCode: serviceCode, totalPrice: total },
     });
 
     revalidatePath('/place-order');
@@ -154,5 +157,72 @@ export async function setCartShippingRate(amount: number): Promise<{ success: bo
   } catch (error) {
     console.error('setCartShippingRate failed:', error);
     return { success: false, error: 'Failed to set shipping rate' };
+  }
+}
+
+/**
+ * Book a shipment with Shiplogic after an order is paid.
+ * Stores waybill and tracking number on the order.
+ * Called from updateOrderToPaid — never throws.
+ */
+export async function bookOrderShipment(orderId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { orderItems: { select: { productId: true, qty: true } } },
+    });
+    if (!order) return { success: false, error: 'Order not found' };
+    if (!order.shippingServiceCode) return { success: false, error: 'No service level code on order' };
+
+    const parcels = await buildParcelsFromItems(order.orderItems);
+    if (parcels.length === 0) return { success: false, error: 'No parcels to ship' };
+
+    const deliveryAddress = order.shippingAddress as unknown as import('@/lib/validations/order').ShippingAddress;
+
+    const result = await createShipment({
+      collectionAddress: getCollectionAddress(),
+      collectionContact: {
+        name: process.env.COURIERGUY_CONTACT_NAME || 'StreetCraft',
+        phone: process.env.COURIERGUY_CONTACT_PHONE || '',
+        email: process.env.COURIERGUY_CONTACT_EMAIL || '',
+      },
+      deliveryAddress: {
+        type: 'residential',
+        streetAddress: deliveryAddress.streetAddress,
+        localArea: deliveryAddress.suburb || '',
+        city: deliveryAddress.city,
+        zone: deliveryAddress.province || '',
+        country: deliveryAddress.country?.length === 2 ? deliveryAddress.country : 'ZA',
+        code: deliveryAddress.postalCode,
+        phone: deliveryAddress.phone || '',
+      },
+      deliveryContact: {
+        name: (deliveryAddress as any).fullName || 'Customer',
+        phone: deliveryAddress.phone || '',
+      },
+      parcels,
+      serviceLevelCode: order.shippingServiceCode,
+      declaredValue: Number(order.itemsPrice),
+      customerReference: orderId.substring(0, 8).toUpperCase(),
+    });
+
+    if (!result.success) {
+      console.error('bookOrderShipment failed:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        waybillNumber: result.waybillNumber ?? null,
+        trackingNumber: result.trackingNumber ?? null,
+      },
+    });
+
+    console.log(`[Courier] Shipment booked for order ${orderId} — waybill: ${result.waybillNumber} | tracking: ${result.trackingNumber}`);
+    return { success: true };
+  } catch (error) {
+    console.error('bookOrderShipment failed:', error);
+    return { success: false, error: 'Failed to book shipment' };
   }
 }

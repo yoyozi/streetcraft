@@ -25,6 +25,13 @@ const ProductDetailsPage = async (props: { params: Promise<{ slug: string }> }) 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
                     {/* Images column */}
                     <div className="md:col-span-2">
+                        {product.isUnique && (
+                            <div className={`flex items-center justify-center gap-1.5 py-2 mb-3 rounded-md text-sm font-bold tracking-wide uppercase text-white ${product.availability <= 0 ? 'bg-red-600' : 'bg-amber-500'}`}>
+                                <span>✦</span>
+                                <span>{product.availability <= 0 ? 'Sold — One of a Kind' : 'One of a Kind — Only 1 Available'}</span>
+                                <span>✦</span>
+                            </div>
+                        )}
                         <ProductImages images={product.images} />
                     </div>
                     {/* Details column */}
