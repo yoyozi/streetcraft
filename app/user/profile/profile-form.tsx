@@ -127,11 +127,10 @@ const Profileform = () => {
             {/* Password Change Card */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Change Password</CardTitle>
+                    <div className="flex items-center justify-end">
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => setShowPasswordForm(!showPasswordForm)}
                         >

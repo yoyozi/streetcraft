@@ -4,18 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 export function proxy(req: NextRequest) {
   const res = NextResponse.next();
 
-  // Handle sessionCartId for cart functionality
-  const secFetchDest = req.headers.get("sec-fetch-dest") || "";
-  const isDocument = secFetchDest === "document"; // main navigation/document
-  if (isDocument) {
-    if (!req.cookies.get("sessionCartId")) {
-      const uuid = crypto.randomUUID();
-      res.cookies.set("sessionCartId", uuid, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-      });
-    }
+  // Handle sessionCartId for cart functionality — set on any request if missing
+  if (!req.cookies.get("sessionCartId")) {
+    const uuid = crypto.randomUUID();
+    res.cookies.set("sessionCartId", uuid, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
   }
 
   // Auth protection: allow anonymous access to product and cart pages

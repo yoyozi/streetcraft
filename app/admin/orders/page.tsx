@@ -25,7 +25,7 @@ const AdminOrdersPage = async (props: { searchParams: Promise<{ page: string; qu
   const serializedOrders = orders.data.map((order) => ({
     id: order.id,
     createdAt: order.createdAt,
-    user: { name: order.userId?.name || 'Unknown' },
+    user: { name: order.user?.name || 'Unknown' },
     totalPrice: Number(order.totalPrice),
     isPaid: order.isPaid,
     paidAt: order.paidAt,

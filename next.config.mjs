@@ -25,6 +25,8 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/webp'],
   },
+  // Allow LAN access from mobile devices during development
+  allowedDevOrigins: ['10.10.77.*'],
   // Increase timeout for slow external resources
   experimental: {
     proxyTimeout: 30000, // 30 seconds
