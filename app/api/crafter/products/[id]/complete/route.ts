@@ -32,18 +32,36 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { costPrice, weight, height, width, depth, availability, description } = body;
+    const { costPrice, weight, height, width, depth, availability, description, isUnique } = body;
+
+    const cp = parseFloat(costPrice);
+    const wt = parseFloat(weight);
+    const ht = parseFloat(height);
+    const wd = parseFloat(width);
+    const dp = parseFloat(depth);
+
+    if (!costPrice || isNaN(cp) || cp <= 0)
+      return NextResponse.json({ error: 'Cost price is required and must be greater than 0' }, { status: 400 });
+    if (!weight || isNaN(wt) || wt <= 0)
+      return NextResponse.json({ error: 'Weight is required and must be greater than 0' }, { status: 400 });
+    if (!height || isNaN(ht) || ht <= 0)
+      return NextResponse.json({ error: 'Height is required and must be greater than 0' }, { status: 400 });
+    if (!width || isNaN(wd) || wd <= 0)
+      return NextResponse.json({ error: 'Width is required and must be greater than 0' }, { status: 400 });
+    if (!depth || isNaN(dp) || dp <= 0)
+      return NextResponse.json({ error: 'Depth is required and must be greater than 0' }, { status: 400 });
 
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        costPrice: costPrice ? parseFloat(costPrice) : product.costPrice,
-        price: costPrice ? parseFloat(costPrice) * 1.5 : product.price,
-        weight: weight ? parseFloat(weight) : product.weight,
-        height: height ? parseFloat(height) : product.height,
-        width: width ? parseFloat(width) : product.width,
-        depth: depth ? parseFloat(depth) : product.depth,
-        availability: availability !== undefined ? parseInt(availability) : product.availability,
+        costPrice: cp,
+        price: cp * 1.5,
+        weight: wt,
+        height: ht,
+        width: wd,
+        depth: dp,
+        availability: isUnique ? 0 : (availability !== undefined ? parseInt(availability) : product.availability),
+        isUnique: typeof isUnique === 'boolean' ? isUnique : product.isUnique,
         description: description?.trim() || product.description,
         needsCompletion: false,
       },

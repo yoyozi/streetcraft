@@ -13,8 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { createCrafterInvite, resendInviteSms, deleteInvite } from '@/lib/actions/invite.actions';
-import { Send, RefreshCw, Trash2 } from 'lucide-react';
+import { createCrafterInvite, resendInviteSms, deleteInvite, resetInvite } from '@/lib/actions/invite.actions';
+import { Send, RefreshCw, Trash2, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 interface Invite {
@@ -73,6 +73,21 @@ export default function InvitePageClient({ invites: initialInvites }: { invites:
         if (refreshed.success) setInvites(refreshed.data);
       } else {
         toast.error(result.error || result.smsError || 'Failed to resend SMS');
+      }
+    });
+  };
+
+  const handleReset = (inviteId: string) => {
+    if (!confirm('Reset this invite so the crafter can re-register?')) return;
+    startTransition(async () => {
+      const result = await resetInvite(inviteId);
+      if (result.success) {
+        toast.success('Invite reset to PENDING');
+        const { getAllInvites } = await import('@/lib/actions/invite.actions');
+        const refreshed = await getAllInvites();
+        if (refreshed.success) setInvites(refreshed.data);
+      } else {
+        toast.error(result.error || 'Failed to reset invite');
       }
     });
   };
@@ -188,6 +203,17 @@ export default function InvitePageClient({ invites: initialInvites }: { invites:
                       title="Resend SMS"
                     >
                       <RefreshCw className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {invite.status === 'REGISTERED' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleReset(invite.id)}
+                      disabled={isPending}
+                      title="Reset invite (allow re-registration)"
+                    >
+                      <RotateCcw className="h-3 w-3" />
                     </Button>
                   )}
                   <Button

@@ -124,7 +124,7 @@ export async function getAllProducts({
   rating?: string;
   sort?: string;
   }) {
-    const where: any = { isActive: true };
+    const where: any = { isActive: true, isSold: false };
     
     // Query filter (case-insensitive search across name, description, category and tags)
     if (query && query !== 'all') {
@@ -724,6 +724,35 @@ export async function updateProductAvailability(
 }
 
 /**
+ * Toggle isSold for a unique product (for crafters)
+ */
+export async function toggleProductSold(
+  productId: string,
+  isSold: boolean
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const { getLinkedCrafterId } = await import('@/lib/auth-utils');
+    const crafterId = await getLinkedCrafterId();
+    if (!crafterId) return { success: false, message: 'No crafter account linked' };
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return { success: false, message: 'Product not found' };
+    if (product.crafterId !== crafterId) return { success: false, message: 'You can only update your own products' };
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: { isSold },
+    });
+
+    revalidatePath('/crafter/products');
+    revalidatePath('/admin/products');
+    return { success: true, message: isSold ? 'Marked as sold' : 'Marked as available' };
+  } catch {
+    return { success: false, message: 'Failed to update sold status' };
+  }
+}
+
+/**
  * Update product cost price (for crafters)
  * Allows craft users to update only the costPrice field of their own products
  */
@@ -893,7 +922,9 @@ export async function getAdminProducts({
     availability: product.availability,
     isActive: product.isActive,
     isUnique: product.isUnique,
+    isSold: product.isSold || false,
     isFirstPage: product.isFirstPage,
+    needsCompletion: product.needsCompletion || false,
     rating: product.rating?.toString() || '0',
     createdAt: product.createdAt.toISOString(),
     images: product.images || [],
@@ -996,27 +1027,18 @@ export async function getCrafterDashboardStats(): Promise<{
     // Get all products for this crafter
     const products = await prisma.product.findMany({
       where: { crafterId: crafter.id },
-      include: {
-        orderItems: {
-          include: {
-            order: true,
-          },
-        },
-      },
     });
 
     const registeredItems = products.length;
-    const approvedItems = products.filter(p => p.isActive).length;
+    // Approved = active AND not sold (isSold is set true on unique items when order is paid)
+    const approvedItems = products.filter(p => p.isActive && !p.isSold).length;
 
-    // Sold items = paid order items for this crafter's products
-    let soldItems = 0;
-    for (const product of products) {
-      for (const orderItem of product.orderItems) {
-        if (orderItem.order.isPaid) {
-          soldItems += orderItem.qty;
-        }
-      }
-    }
+    // Sold items = paid order items linked to this crafter (via OrderItem.crafterId)
+    const soldItemsAgg = await prisma.orderItem.aggregate({
+      where: { crafterId: crafter.id, order: { isPaid: true } },
+      _sum: { qty: true },
+    });
+    const soldItems = soldItemsAgg._sum.qty || 0;
 
     // Funds due = amount still owed to the crafter = sum of their PENDING
     // crafter payments (cost price allocated when an order is paid, not yet paid out).

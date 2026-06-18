@@ -138,3 +138,16 @@ export async function sendOtpSms(mobile: string, code: string): Promise<SendSmsR
   const content = `Your StreetCraft verification code is ${code}. Expires in 5 minutes.`;
   return sendSms(mobile, content);
 }
+
+/**
+ * Notify a crafter that their item(s) have been sold and need to be prepared for collection.
+ */
+export async function sendCrafterCollectionSms(
+  mobile: string,
+  itemSummary: string,
+): Promise<SendSmsResult> {
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXTAUTH_URL || 'https://streetcraft.co.za';
+  const link = `${baseUrl}/crafter/sold`;
+  const content = `StreetCraft: ${itemSummary} sold! Prepare for collection. View: ${link}`;
+  return sendSms(mobile, content);
+}

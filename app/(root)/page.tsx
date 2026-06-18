@@ -28,15 +28,15 @@ const HomePage = async () => {
 
     return <>
 
-        <BannerCarousel banners={banners} />
-
-        <p className="text-center text-muted-foreground text-sm py-3">
+        <p className="text-center text-muted-foreground text-lg py-3">
           Local{' '}
           <a href="/crafters" className="underline underline-offset-4 hover:text-foreground transition-colors">
             streetcrafters
           </a>
           {' '}Internet sales
         </p>
+
+        <BannerCarousel banners={banners} />
 
         <ProductList 
             data={latestProducts} 

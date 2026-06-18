@@ -79,6 +79,22 @@ export default function CrafterDashboard({ crafterName }: CrafterDashboardProps)
                 <div className="text-xl sm:text-2xl font-bold">R{stats.fundsDue.toFixed(2)}</div>
               </CardContent>
             </Card>
+
+            <Card className="col-span-2">
+              <CardHeader className="pb-2 px-3 sm:px-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                  Items Sold
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 sm:px-6 flex items-center justify-between">
+                <div className="text-xl sm:text-2xl font-bold">{stats.soldItems}</div>
+                {stats.soldItems > 0 && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/crafter/sold">View sold items</Link>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </div>

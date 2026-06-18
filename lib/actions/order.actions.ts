@@ -118,10 +118,12 @@ export async function createOrder() {
 
             // Create the order items from the cart items
             for (const item of cart.items as CartItem[]) {
+                const product = await tx.product.findUnique({ where: { id: item.productId }, select: { crafterId: true } });
                 await tx.orderItem.create({
                     data: {
                         orderId: newOrder.id,
                         productId: item.productId,
+                        crafterId: product?.crafterId ?? null,
                         name: item.name,
                         slug: item.slug,
                         image: item.image,
@@ -129,17 +131,6 @@ export async function createOrder() {
                         qty: item.qty,
                     },
                 });
-            }
-
-            // Mark unique items as sold
-            for (const item of cart.items as CartItem[]) {
-                const product = await tx.product.findUnique({ where: { id: item.productId } });
-                if (product?.isUnique) {
-                    await tx.product.update({
-                        where: { id: item.productId },
-                        data: { availability: 0, isActive: false, isFirstPage: false },
-                    });
-                }
             }
 
             // Clear the cart items and reset prices
@@ -551,6 +542,25 @@ export async function updateOrderToPaid({
       },
     });
 
+    // Mark unique products in this order as sold
+    try {
+      const orderWithItems = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { orderItems: { select: { productId: true } } },
+      });
+      if (orderWithItems) {
+        const productIds = orderWithItems.orderItems.map((i) => i.productId).filter(Boolean) as string[];
+        if (productIds.length > 0) {
+          await prisma.product.updateMany({
+            where: { id: { in: productIds }, isUnique: true },
+            data: { isSold: true },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to mark unique products as sold:', error);
+    }
+
     // Create crafter payments for this order
     try {
       const { createCrafterPaymentsForOrder } = await import('./crafter-payment.actions');
@@ -560,13 +570,65 @@ export async function updateOrderToPaid({
       // Don't throw - we don't want payment creation to break the order payment flow
     }
 
-    // Book shipment with Shiplogic to generate waybill + tracking number
+    // NOTE: Shipment booking (waybill creation) is NOT done here.
+    // It is triggered manually by logistics staff via the admin order page
+    // once the crafter's items have physically arrived at the collection address.
+
+    // Notify logistics email + each crafter via SMS
     try {
-      const { bookOrderShipment } = await import('@/lib/actions/courier.actions');
-      await bookOrderShipment(orderId);
+      const orderForNotify = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          orderItems: {
+            include: {
+              crafter: { select: { businessName: true, mobile: true } },
+            },
+          },
+        },
+      });
+
+      if (orderForNotify) {
+        // Group items by crafter
+        const crafterMap = new Map<string, { businessName: string; mobile: string; items: { name: string; qty: number }[] }>();
+        for (const item of orderForNotify.orderItems) {
+          if (!item.crafterId || !item.crafter) continue;
+          const existing = crafterMap.get(item.crafterId);
+          if (existing) {
+            existing.items.push({ name: item.name, qty: item.qty });
+          } else {
+            crafterMap.set(item.crafterId, {
+              businessName: item.crafter.businessName,
+              mobile: item.crafter.mobile,
+              items: [{ name: item.name, qty: item.qty }],
+            });
+          }
+        }
+
+        const crafters = Array.from(crafterMap.values());
+
+        if (crafters.length > 0) {
+          // Email logistics
+          const { sendCollectionNotification } = await import('@/email/send-collection-notification');
+          await sendCollectionNotification({ orderId, crafters }).catch((e) =>
+            console.error('Failed to send logistics collection email:', e)
+          );
+
+          // SMS each crafter
+          const { sendCrafterCollectionSms } = await import('@/lib/clickatell');
+          for (const crafter of crafters) {
+            const totalQty = crafter.items.reduce((s, i) => s + i.qty, 0);
+            const summary =
+              totalQty === 1
+                ? `"${crafter.items[0].name}"`
+                : `${totalQty} items`;
+            await sendCrafterCollectionSms(crafter.mobile, summary).catch((e) =>
+              console.error(`Failed to send SMS to crafter ${crafter.businessName}:`, e)
+            );
+          }
+        }
+      }
     } catch (error) {
-      console.error('Failed to book shipment:', error);
-      // Don't throw - shipment booking failure must not break the payment confirmation
+      console.error('Failed to send collection notifications:', error);
     }
 
     // Get the updated order with items and user for email
@@ -780,6 +842,50 @@ export async function updateOrderToPaidByCOD(orderId: string) {
     });
     revalidatePath(`/order/${orderId}`);
     return { success: true, message: 'Order paid successfully' };
+  } catch (err) {
+    return { success: false, message: formatError(err).message };
+  }
+}
+
+// DEV ONLY — manually simulate a Shiplogic status update for sandbox testing
+export async function setOrderCourierStatus(orderId: string, status: string) {
+  if (process.env.NODE_ENV !== 'development') {
+    return { success: false, message: 'Only available in development' };
+  }
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'admin') throw new Error('Unauthorized');
+
+    const isDelivered = ['delivered', 'pod'].includes(status.toLowerCase());
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        courierStatus: status,
+        ...(isDelivered ? { isDelivered: true, deliveredAt: new Date() } : {}),
+      },
+    });
+
+    revalidatePath(`/order/${orderId}`);
+    return { success: true, message: `Status set to "${status}"` };
+  } catch (err) {
+    return { success: false, message: formatError(err).message };
+  }
+}
+
+// Clear waybill/tracking so admin can rebook collection after cancelling in Shiplogic portal
+export async function resetOrderShipment(orderId: string) {
+  try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== 'admin') throw new Error('Unauthorized');
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { waybillNumber: null, trackingNumber: null },
+    });
+
+    revalidatePath(`/order/${orderId}`);
+    return { success: true, message: 'Shipment reset — cancel the waybill in Shiplogic, then rebook when goods are ready' };
   } catch (err) {
     return { success: false, message: formatError(err).message };
   }

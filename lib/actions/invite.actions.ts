@@ -6,6 +6,26 @@ import { checkAdminAuth } from './auth-actions';
 import { sendCrafterInviteSms } from '@/lib/clickatell';
 import { randomBytes } from 'crypto';
 
+// RESET INVITE (Admin only) — allows a previously REGISTERED invite to be reused
+export async function resetInvite(inviteId: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    await prisma.crafterInvite.update({
+      where: { id: inviteId },
+      data: { status: 'PENDING', registeredAt: null },
+    });
+
+    revalidatePath('/admin/crafters/invite');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to reset invite' };
+  }
+}
+
 // Generate a short invite code (8 chars, URL-safe)
 function generateInviteCode(): string {
   return randomBytes(4).toString('hex'); // e.g. "a3f9b2c1"
@@ -217,6 +237,15 @@ export async function registerCrafterByPhone(data: {
       return { success: false, error: 'This mobile number is already registered' };
     }
 
+    // Check if a user account with this mobile already exists (e.g. from a previous failed/deleted registration)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: `${mobile}@phone.local` },
+    });
+
+    if (existingUser) {
+      return { success: false, error: 'An account for this mobile number already exists. Please contact support.' };
+    }
+
     // Create user + crafter in a transaction
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -258,6 +287,7 @@ export async function registerCrafterByPhone(data: {
     return { success: true };
   } catch (error) {
     console.error('Register crafter error:', error);
-    return { success: false, error: 'Registration failed. Please try again.' };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `Registration failed: ${message}` };
   }
 }

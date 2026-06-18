@@ -17,7 +17,22 @@ export async function POST(
     const body = await request.json();
     const { costPrice, weight, height, width, depth, availability, isUnique } = body;
 
-    console.log('Received form data:', { costPrice, weight, height, width, depth, availability, isUnique });
+    const cp = parseFloat(costPrice);
+    const wt = parseFloat(weight);
+    const ht = parseFloat(height);
+    const wd = parseFloat(width);
+    const dp = parseFloat(depth);
+
+    if (!costPrice || isNaN(cp) || cp <= 0)
+      return NextResponse.json({ error: 'Cost price is required and must be greater than 0' }, { status: 400 });
+    if (!weight || isNaN(wt) || wt <= 0)
+      return NextResponse.json({ error: 'Weight is required and must be greater than 0' }, { status: 400 });
+    if (!height || isNaN(ht) || ht <= 0)
+      return NextResponse.json({ error: 'Height is required and must be greater than 0' }, { status: 400 });
+    if (!width || isNaN(wd) || wd <= 0)
+      return NextResponse.json({ error: 'Width is required and must be greater than 0' }, { status: 400 });
+    if (!depth || isNaN(dp) || dp <= 0)
+      return NextResponse.json({ error: 'Depth is required and must be greater than 0' }, { status: 400 });
 
     // Verify the upload belongs to this crafter
     const crafter = await prisma.crafter.findUnique({
@@ -40,12 +55,12 @@ export async function POST(
     const updated = await prisma.productImageUpload.update({
       where: { id },
       data: {
-        costPrice: costPrice && costPrice.trim() !== '' ? parseFloat(costPrice) : upload.costPrice,
-        weight: weight && weight.trim() !== '' ? parseFloat(weight) : upload.weight,
-        height: height && height.trim() !== '' ? parseFloat(height) : upload.height,
-        width: width && width.trim() !== '' ? parseFloat(width) : upload.width,
-        depth: depth && depth.trim() !== '' ? parseFloat(depth) : upload.depth,
-        availability: isUnique ? 1 : (availability && availability.trim() !== '' ? parseInt(availability) : upload.availability),
+        costPrice: cp,
+        weight: wt,
+        height: ht,
+        width: wd,
+        depth: dp,
+        availability: isUnique ? 1 : (availability && String(availability).trim() !== '' ? parseInt(availability) : (upload.availability ?? 3)),
         isUnique: typeof isUnique === 'boolean' ? isUnique : upload.isUnique,
       },
     });

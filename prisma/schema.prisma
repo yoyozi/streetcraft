@@ -140,10 +140,11 @@ model Crafter {
   bankAccountType  String?   @default("Cheque")
 
   // Relations
-  products Product[]
+  products     Product[]
   imageUploads ProductImageUpload[]
-  payments CrafterPayment[]
-  payouts CrafterPayout[]
+  payments     CrafterPayment[]
+  payouts      CrafterPayout[]
+  orderItems   OrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -219,6 +220,7 @@ model Product {
   numReviews          Int       @default(0)
   isFirstPage         Boolean   @default(false)
   isUnique            Boolean   @default(false)
+  isSold              Boolean   @default(false)
   isActive            Boolean   @default(true)
   needsCompletion     Boolean   @default(false)
   banner              String?
@@ -350,6 +352,8 @@ model OrderItem {
   order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
+  crafterId String?
+  crafter   Crafter? @relation(fields: [crafterId], references: [id], onDelete: SetNull)
   qty       Int
   price     Float
   name      String
@@ -359,6 +363,7 @@ model OrderItem {
   @@unique([orderId, productId])
   @@index([orderId])
   @@index([productId])
+  @@index([crafterId])
 }
 
 model Review {

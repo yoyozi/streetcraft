@@ -4,15 +4,17 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkAdminAuth } from './auth-actions';
 import { UTApi } from 'uploadthing/server';
+import { hashSync } from 'bcrypt-ts-edge';
 
 // CREATE CRAFTER (Admin only)
-// Admin manually creates a crafter — auto-creates a linked User record
+// Admin manually creates a crafter — auto-creates a linked User record with real email + password
 export async function createCrafter(data: {
-  name: string;
-  businessName?: string;
+  businessName: string;
   location: string;
   mobile: string;
+  password?: string;
   category?: string;
+  description?: string;
 }) {
   try {
     const authCheck = await checkAdminAuth();
@@ -20,31 +22,47 @@ export async function createCrafter(data: {
       return { success: false, error: authCheck.error };
     }
 
-    const { name, businessName, location, mobile, category } = data;
+    const { businessName, location, mobile, password, category, description } = data;
 
-    if (!name || !location || !mobile) {
-      return { success: false, error: 'Name, location and mobile are required' };
+    if (!businessName || !location || !mobile) {
+      return { success: false, error: 'Business name, location and mobile are required' };
+    }
+    if (!password) {
+      return { success: false, error: 'Initial password is required' };
     }
 
-    // Normalize mobile
+    // Normalize mobile — this becomes the login identifier
     let normalized = mobile.replace(/[\s\-()]/g, '');
     if (normalized.startsWith('+')) normalized = normalized.slice(1);
     if (normalized.startsWith('0')) normalized = '27' + normalized.slice(1);
 
-    // Check if mobile already exists as a crafter
-    const existingCrafter = await prisma.crafter.findFirst({
-      where: { mobile: normalized },
-    });
+    // Check for duplicates
+    const existingCrafter = await prisma.crafter.findFirst({ where: { mobile: normalized } });
     if (existingCrafter) {
       return { success: false, error: 'A crafter with this mobile number already exists' };
+    }
+    const fakeEmail = `${normalized}@phone.local`;
+    const existingUser = await prisma.user.findUnique({ where: { email: fakeEmail } });
+    if (existingUser) {
+      return { success: false, error: 'A user with this mobile number already exists' };
+    }
+
+    const hashedPassword = hashSync(password, 10);
+
+    // Resolve categoryId before transaction
+    let categoryId: string | null = null;
+    if (category && category.trim() !== '') {
+      const cat = await prisma.category.findFirst({ where: { name: category.trim() } });
+      categoryId = cat?.id ?? null;
     }
 
     // Create User + Crafter in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          name: name.trim(),
-          email: `${normalized}@phone.local`,
+          name: businessName.trim(),
+          email: fakeEmail,
+          password: hashedPassword,
           role: 'craft',
           isActive: true,
         },
@@ -52,17 +70,18 @@ export async function createCrafter(data: {
 
       const crafter = await tx.crafter.create({
         data: {
-          businessName: businessName?.trim() || name.trim(),
+          businessName: businessName.trim(),
           location: location.trim(),
           mobile: normalized,
+          description: description?.trim() || null,
           userId: user.id,
           status: 'APPROVED',
           isActive: true,
           approvedAt: new Date(),
+          ...(categoryId ? { categoryId } : {}),
         },
       });
 
-      // Link crafterId back to user
       await tx.user.update({
         where: { id: user.id },
         data: { crafterId: crafter.id },
@@ -90,6 +109,10 @@ export async function updateCrafter(
     mobile?: string;
     category?: string;
     description?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankBranchCode?: string;
+    bankAccountType?: string;
   }
 ) {
   try {
@@ -124,6 +147,10 @@ export async function updateCrafter(
       }
     }
     if (data.description !== undefined) updateData.description = data.description.trim();
+    if (data.bankName !== undefined) updateData.bankName = data.bankName.trim() || null;
+    if (data.bankAccountNumber !== undefined) updateData.bankAccountNumber = data.bankAccountNumber.trim() || null;
+    if (data.bankBranchCode !== undefined) updateData.bankBranchCode = data.bankBranchCode.trim() || null;
+    if (data.bankAccountType !== undefined) updateData.bankAccountType = data.bankAccountType.trim() || null;
 
     const crafter = await prisma.crafter.update({
       where: { id },
@@ -183,7 +210,7 @@ export async function toggleCrafterStatus(id: string, isActive: boolean) {
       }
 
       const missing: string[] = [];
-      if (!crafter.category) missing.push('Category');
+      if (!crafter.categoryId) missing.push('Category');
       if (!crafter.location) missing.push('Location');
       if (!crafter.mobile) missing.push('Mobile');
       if (missing.length > 0) {
@@ -207,7 +234,8 @@ export async function toggleCrafterStatus(id: string, isActive: boolean) {
 // GET ALL CRAFTERS
 export async function getAllCrafters(filter?: { isActive?: boolean }) {
   try {
-    const where = filter?.isActive !== undefined ? { isActive: filter.isActive } : {};
+    const where: Record<string, unknown> = { status: { not: 'PENDING' } };
+    if (filter?.isActive !== undefined) where.isActive = filter.isActive;
 
     const crafters = await prisma.crafter.findMany({
       where,
@@ -307,6 +335,40 @@ export async function getPendingCrafters() {
   }
 }
 
+// RESEND PASSWORD SETUP SMS (Admin only)
+export async function resendPasswordSetupSms(crafterId: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const crafter = await prisma.crafter.findUnique({ where: { id: crafterId } });
+    if (!crafter) return { success: false, error: 'Crafter not found' };
+
+    const { randomBytes } = await import('crypto');
+    const token = randomBytes(16).toString('hex');
+
+    await prisma.user.update({
+      where: { id: crafter.userId },
+      data: { passwordSetupToken: token },
+    });
+
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const setupUrl = `${baseUrl}/set-password?token=${token}`;
+    const { sendSms } = await import('@/lib/clickatell');
+    await sendSms(
+      crafter.mobile,
+      `StreetCraft: Set your password: ${setupUrl}`
+    );
+
+    revalidatePath(`/admin/crafters/${crafterId}`);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to resend setup SMS' };
+  }
+}
+
 // APPROVE CRAFTER (Admin only)
 export async function approveCrafter(id: string, categoryId?: string) {
   try {
@@ -325,19 +387,6 @@ export async function approveCrafter(id: string, categoryId?: string) {
       },
     });
 
-    // Convert registration work samples into ProductImageUpload records
-    // so they appear in the crafter's dashboard for them to fill in details
-    if (crafter.workSamples && crafter.workSamples.length > 0) {
-      await prisma.productImageUpload.createMany({
-        data: crafter.workSamples.map((imageUrl) => ({
-          crafterId: crafter.id,
-          imageUrl,
-          status: 'PENDING',
-        })),
-        skipDuplicates: true,
-      });
-    }
-
     // Generate password setup token
     const { randomBytes } = await import('crypto');
     const token = randomBytes(16).toString('hex');
@@ -354,7 +403,7 @@ export async function approveCrafter(id: string, categoryId?: string) {
     const { sendSms } = await import('@/lib/clickatell');
     await sendSms(
       crafter.mobile,
-      `Great news ${crafter.businessName}! Your StreetCraft application has been approved. Set your password to login: ${setupUrl}`
+      `StreetCraft: Application approved! Set your password: ${setupUrl}`
     );
 
     revalidatePath('/admin/crafters');
@@ -441,6 +490,7 @@ export async function createProductFromSample(crafterId: string, imageUrl: strin
 
     const crafter = await prisma.crafter.findUnique({
       where: { id: crafterId },
+      include: { category: true },
     });
 
     if (!crafter) {
@@ -461,11 +511,12 @@ export async function createProductFromSample(crafterId: string, imageUrl: strin
       data: {
         name: `Draft - ${crafter.businessName}`,
         slug,
-        category: crafter.category || 'Uncategorized',
+        category: crafter.category?.name || 'Uncategorized',
         images: [imageUrl],
         description: '',
         price: 0,
         isActive: false,
+        needsCompletion: true,
         crafterId,
       },
     });
@@ -493,5 +544,43 @@ export async function deleteCrafter(id: string) {
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete crafter' };
+  }
+}
+
+// REMOVE WORK SAMPLE (Admin only)
+export async function removeWorkSample(crafterId: string, imageUrl: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const crafter = await prisma.crafter.findUnique({ where: { id: crafterId } });
+    if (!crafter) {
+      return { success: false, error: 'Crafter not found' };
+    }
+
+    await prisma.crafter.update({
+      where: { id: crafterId },
+      data: { workSamples: crafter.workSamples.filter((s) => s !== imageUrl) },
+    });
+
+    // Delete file from UploadThing
+    const match = imageUrl.match(/\/f\/([^/?]+)/);
+    const fileKey = match ? match[1] : null;
+    if (fileKey) {
+      try {
+        const { UTApi } = await import('uploadthing/server');
+        const utapi = new UTApi();
+        await utapi.deleteFiles([fileKey]);
+      } catch (e) {
+        console.error('Failed to delete work sample from UploadThing:', e);
+      }
+    }
+
+    revalidatePath(`/admin/crafters/${crafterId}`);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to remove work sample' };
   }
 }

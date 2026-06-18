@@ -39,9 +39,11 @@ interface Product {
   availability: number;
   isActive: boolean;
   isUnique: boolean;
+  isSold?: boolean;
   category: string;
   rating: string;
   isFirstPage: boolean;
+  needsCompletion?: boolean;
   crafter?: { id: string; name: string } | null;
 }
 
@@ -59,8 +61,11 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
   const searchParams = useSearchParams();
   const [togglingProducts, setTogglingProducts] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
+  const [showPending, setShowPending] = useState(false);
 
-  const needsReviewCount = products.filter((p) => p && p.priceNeedsReview).length;
+  const pendingCount = products.filter((p) => p?.needsCompletion).length;
+  const visibleProducts = showPending ? products : products.filter((p) => !p?.needsCompletion);
+  const needsReviewCount = visibleProducts.filter((p) => p && p.priceNeedsReview).length;
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -70,13 +75,17 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
   };
 
   const getAvailabilityLabel = (product: Product) => {
-    if (product.isUnique) return { label: 'Unique', variant: 'default' as const, className: 'bg-purple-600 hover:bg-purple-600/90 text-white' };
+    if (product.isUnique) {
+      return product.isSold
+        ? { label: 'Sold', variant: 'destructive' as const, className: '' }
+        : { label: 'Unique', variant: 'default' as const, className: 'bg-purple-600 hover:bg-purple-600/90 text-white' };
+    }
     if (product.availability === -1) return { label: 'Not Available', variant: 'destructive' as const, className: '' };
     if (product.availability === 0) return { label: 'In Stock', variant: 'default' as const, className: 'bg-chart-2 hover:bg-chart-2/90 text-white' };
     return { label: `${product.availability} ${product.availability === 1 ? 'Day' : 'Days'}`, variant: 'secondary' as const, className: '' };
   };
 
-  const isSoldUnique = (product: Product) => product.isUnique && product.availability <= 0;
+  const isSoldUnique = (product: Product) => product.isUnique && !!product.isSold;
 
   const handleToggleActive = async (productId: string, productName: string) => {
     setTogglingProducts(prev => new Set(prev).add(productId));
@@ -114,6 +123,17 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
     );
   }
 
+  if (!showPending && visibleProducts.length === 0) {
+    return (
+      <div className='text-center py-10'>
+        <p className='text-muted-foreground'>No products found</p>
+        {pendingCount > 0 && (
+          <p className='text-xs text-muted-foreground mt-1'>{pendingCount} pending product(s) hidden — use the checkbox to show them.</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className='mb-4 flex flex-wrap items-center gap-2'>
@@ -131,6 +151,16 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
             ))}
           </SelectContent>
         </Select>
+
+        <label className='flex items-center gap-2 text-sm cursor-pointer'>
+          <input
+            type='checkbox'
+            checked={showPending}
+            onChange={(e) => setShowPending(e.target.checked)}
+            className='h-4 w-4'
+          />
+          Show pending ({pendingCount})
+        </label>
 
         <div className='ml-auto flex items-center gap-2'>
           {needsReviewCount > 0 && (
@@ -159,7 +189,7 @@ export default function ProductsListClient({ products, allCrafters, selectedCraf
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.filter(p => p && p.id).map((product) => {
+          {visibleProducts.filter(p => p && p.id).map((product) => {
             const availability = getAvailabilityLabel(product);
             return (
               <TableRow key={product.id}>

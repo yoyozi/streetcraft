@@ -42,16 +42,15 @@ export default async function SignInPage(props: {
                     <Link href='/' className="flex-center">
                         <ScLogo size="lg" />
                     </Link>
-                    <CardTitle className="text-center">Sign In</CardTitle>
-                    <CardDescription className="text-center">
-                        Sing in to your account
-                    </CardDescription>
+                    <CardTitle className="text-center">Sign in to your account</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <CheckoutSignInPrompt callbackUrl={callbackUrl} />
                     
-                    <GoogleSignInButton callbackUrl={callbackUrl} />
-                    <GitHubSignInButton callbackUrl={callbackUrl} />
+                    <div className="grid grid-cols-2 gap-2">
+                        <GoogleSignInButton callbackUrl={callbackUrl} />
+                        <GitHubSignInButton callbackUrl={callbackUrl} />
+                    </div>
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t" />

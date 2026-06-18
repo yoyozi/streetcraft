@@ -17,8 +17,8 @@ export default function PasswordResetGuard({ children }: { children: React.React
   useEffect(() => {
     //console.log('[PASSWORD RESET GUARD] useEffect triggered');
     
-    // Only check if session is loaded and user is authenticated
-    if (status === 'authenticated' && session?.user?.requirePasswordReset) {
+    // Only check if session is loaded, user is authenticated, and not a crafter (crafters use OTP reset)
+    if (status === 'authenticated' && session?.user?.requirePasswordReset && session?.user?.role !== 'craft') {
       console.log('[PASSWORD RESET GUARD] ✅ Conditions met for redirect');
       
       // Don't redirect if already on reset password page
@@ -39,7 +39,7 @@ export default function PasswordResetGuard({ children }: { children: React.React
   }, [session, status, pathname]);
 
   // If user needs to reset password and not on reset page, show loading
-  if (status === 'authenticated' && session?.user?.requirePasswordReset && pathname !== '/reset-password') {
+  if (status === 'authenticated' && session?.user?.requirePasswordReset && session?.user?.role !== 'craft' && pathname !== '/reset-password') {
     //console.log('[PASSWORD RESET GUARD] 🔄 Showing redirect loading state');
     return (
       <div className="flex min-h-screen items-center justify-center">

@@ -28,13 +28,13 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { forwardRef } from 'react';
 
-// Crafter validation schema matching FUNCTIONING.md
+// Crafter validation schema
 const crafterSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  businessName: z.string().optional(),
+  businessName: z.string().min(1, 'Business name is required'),
+  mobile: z.string().min(10, 'Valid mobile number is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   description: z.string().optional(),
   location: z.string().min(1, 'Location is required'),
-  mobile: z.string().min(10, 'Valid mobile number is required'),
   category: z.string().optional(),
 });
 
@@ -42,7 +42,7 @@ type CrafterFormValues = z.infer<typeof crafterSchema>;
 
 interface CrafterData {
   _id?: string;
-  name: string;
+  name?: string;
   businessName?: string;
   description?: string | null;
   location: string;
@@ -81,18 +81,18 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
   const form = useForm<CrafterFormValues>({
     resolver: zodResolver(crafterSchema),
     defaultValues: crafter ? {
-      name: crafter.businessName || crafter.name || '',
-      businessName: crafter.businessName || '',
+      businessName: crafter.businessName || crafter.name || '',
+      mobile: crafter.mobile || '',
+      password: '',
       description: crafter.description || '',
-      location: crafter.location,
-      mobile: crafter.mobile,
+      location: crafter.location || '',
       category: crafter.category || '',
     } : {
-      name: '',
       businessName: '',
+      mobile: '',
+      password: '',
       description: '',
       location: '',
-      mobile: '',
       category: '',
     },
   });
@@ -135,21 +135,54 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
         ref={ref || formRef}
         method='post'
         onSubmit={form.handleSubmit(handleFormSubmit)}
-        className='space-y-8'
+        className='space-y-6'
       >
-        <FormField
-          control={form.control}
-          name='description'
-          render={({ field }) => (
-            <FormItem className='w-full'>
-              <FormLabel>Admin Comments</FormLabel>
-              <FormControl>
-                <Textarea placeholder='Admin notes about this crafter' rows={3} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className='flex flex-col gap-5 md:flex-row'>
+          <FormField
+            control={form.control}
+            name='businessName'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Business Name</FormLabel>
+                <FormControl>
+                  <Input placeholder='Enter business name' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='mobile'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel>Mobile Number</FormLabel>
+                <FormControl>
+                  <Input placeholder='e.g. 0821234567' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {!isUpdate && (
+          <FormField
+            control={form.control}
+            name='password'
+            render={({ field }) => (
+              <FormItem className='w-full md:w-1/2'>
+                <FormLabel>Initial Password</FormLabel>
+                <FormControl>
+                  <Input type='password' placeholder='Min. 6 characters' {...field} />
+                </FormControl>
+                <FormMessage />
+                <p className='text-xs text-muted-foreground'>Crafter logs in with their mobile number + this password.</p>
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className='flex flex-col gap-5 md:flex-row'>
           <FormField
@@ -192,6 +225,20 @@ const CrafterForm = forwardRef<HTMLFormElement, CrafterFormProps>(({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name='description'
+          render={({ field }) => (
+            <FormItem className='w-full'>
+              <FormLabel>Admin Notes</FormLabel>
+              <FormControl>
+                <Textarea placeholder='Admin notes about this crafter' rows={3} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {!onSubmit && (
           <Button type='submit' disabled={form.formState.isSubmitting} className='w-full md:w-auto'>

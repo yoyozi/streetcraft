@@ -18,7 +18,7 @@ const calcPrice = (items: CartItem[]) => {
     const itemsPrice = round2(
         items.reduce((acc, item) => acc + Number(item.price) * item.qty, 0)
     ),
-    shippingPrice = round2(itemsPrice > 1000 ? 0 : 150),
+    shippingPrice = 0,
     taxPrice = 0,
     totalPrice = round2(itemsPrice + shippingPrice + taxPrice)
 
@@ -56,8 +56,8 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
         if (!product) throw new Error('Product not found');
 
-        // Block unique items that are sold out
-        if (product.isUnique && product.availability <= 0) {
+        // Block unique items that are sold
+        if (product.isUnique && product.isSold) {
             return { success: false, message: 'This is a unique item and has already been sold' };
         }
 
@@ -143,6 +143,7 @@ export async function addItemToCart(data: CartItem): Promise<CartActionResponse>
                     shippingPrice: prices.shippingPrice,
                     taxPrice: prices.taxPrice,
                     totalPrice: prices.totalPrice,
+                    shippingServiceCode: null,
                 }
             });
 
@@ -247,6 +248,7 @@ export async function removeItemFromCart(productId: string): Promise<CartActionR
                 shippingPrice: prices.shippingPrice,
                 taxPrice: prices.taxPrice,
                 totalPrice: prices.totalPrice,
+                shippingServiceCode: null,
             }
         });
 

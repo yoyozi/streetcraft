@@ -33,7 +33,7 @@ export function GoogleSignInButton({ callbackUrl }: { callbackUrl: string }) {
       ) : (
         <>
           <svg
-            className="w-4 h-4 mr-2"
+            className="w-4 h-4 sm:mr-2"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -55,7 +55,7 @@ export function GoogleSignInButton({ callbackUrl }: { callbackUrl: string }) {
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google
+          <span className="hidden sm:inline">Sign in with Google</span>
         </>
       )}
     </Button>

@@ -69,8 +69,14 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
 
   const uploads = uploadStatus?.uploads || [];
   const pendingUploads = uploads.filter(u => u.status === 'PENDING');
-  const needsDetails = pendingUploads.filter(u => u.costPrice === null || u.costPrice === undefined || u.weight === null || u.weight === undefined || u.height === null || u.height === undefined || u.width === null || u.width === undefined || u.depth === null || u.depth === undefined);
-  const submittedForApproval = pendingUploads.filter(u => u.costPrice !== null && u.costPrice !== undefined && u.weight !== null && u.weight !== undefined && u.height !== null && u.height !== undefined && u.width !== null && u.width !== undefined && u.depth !== null && u.depth !== undefined);
+  const hasCompleteDetails = (u: UploadData) =>
+    u.costPrice != null && u.costPrice > 0 &&
+    u.weight   != null && u.weight   > 0 &&
+    u.height   != null && u.height   > 0 &&
+    u.width    != null && u.width    > 0 &&
+    u.depth    != null && u.depth    > 0;
+  const needsDetails = pendingUploads.filter(u => !hasCompleteDetails(u));
+  const submittedForApproval = pendingUploads.filter(u => hasCompleteDetails(u));
   
   const rejectedUploads = uploads.filter(u => u.status === 'REJECTED');
 
@@ -167,6 +173,33 @@ export default function ImageUploadSection({ onUpdate }: ImageUploadSectionProps
       const formData = formDataMap[uploadId];
       if (!formData) {
         toast.error('Please fill in all fields');
+        return;
+      }
+
+      const cp = parseFloat(formData.costPrice);
+      const wt = parseFloat(formData.weight);
+      const ht = parseFloat(formData.height);
+      const wd = parseFloat(formData.width);
+      const dp = parseFloat(formData.depth);
+
+      if (!formData.costPrice || isNaN(cp) || cp <= 0) {
+        toast.error('Please enter a valid cost price greater than 0');
+        return;
+      }
+      if (!formData.weight || isNaN(wt) || wt <= 0) {
+        toast.error('Please enter a valid weight greater than 0');
+        return;
+      }
+      if (!formData.height || isNaN(ht) || ht <= 0) {
+        toast.error('Please enter a valid height greater than 0');
+        return;
+      }
+      if (!formData.width || isNaN(wd) || wd <= 0) {
+        toast.error('Please enter a valid width greater than 0');
+        return;
+      }
+      if (!formData.depth || isNaN(dp) || dp <= 0) {
+        toast.error('Please enter a valid depth greater than 0');
         return;
       }
 

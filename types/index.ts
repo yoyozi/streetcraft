@@ -35,6 +35,7 @@ export type Product = z.infer<typeof insertProductSchema> & {
     width?: number;
     depth?: number;
     needsCompletion?: boolean;
+    isSold?: boolean;
 };
 
 export type Cart = z.infer<typeof insertCartSchema> 

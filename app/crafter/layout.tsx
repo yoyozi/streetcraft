@@ -15,16 +15,16 @@ export default async function CrafterLayout({
     return (
         <>
             <div className="flex flex-col ">
-                <div className="border-b container mx-auto bg-red-50">
-                    <div className="flex items-center h-16 px-4">
+                <div className="border-b w-full bg-red-50">
+                    <div className="container mx-auto flex items-center h-16 px-4">
                         <Link href="/" className="flex items-center gap-3">
                             <ScLogo />
-                            <span className="text-lg font-bold text-primary">
+                            <span className="hidden sm:inline text-lg font-bold text-primary">
                                 {APP_NAME}
                             </span>
                         </Link>
                         {/* NAV for CRAFTER */}
-                        <CrafterNav className="mx-6"/>
+                        <CrafterNav className="mx-1 sm:mx-6"/>
                         <div className="ml-auto items-center flex space-x-4">
 
                             <Menu /> 

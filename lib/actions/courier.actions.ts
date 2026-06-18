@@ -169,7 +169,10 @@ export async function bookOrderShipment(orderId: string): Promise<{ success: boo
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { orderItems: { select: { productId: true, qty: true } } },
+      include: {
+        orderItems: { select: { productId: true, qty: true } },
+        user: { select: { email: true } },
+      },
     });
     if (!order) return { success: false, error: 'Order not found' };
     if (!order.shippingServiceCode) return { success: false, error: 'No service level code on order' };
@@ -199,6 +202,7 @@ export async function bookOrderShipment(orderId: string): Promise<{ success: boo
       deliveryContact: {
         name: (deliveryAddress as any).fullName || 'Customer',
         phone: deliveryAddress.phone || '',
+        email: order.user?.email?.endsWith('@phone.local') ? undefined : (order.user?.email ?? undefined),
       },
       parcels,
       serviceLevelCode: order.shippingServiceCode,

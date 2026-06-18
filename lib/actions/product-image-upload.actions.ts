@@ -146,25 +146,6 @@ export async function getCrafterUploadStatus(): Promise<{
       return { success: false, canUpload: false, remaining: 0, limit: 0, pendingCount: 0, error: 'Crafter not found' };
     }
 
-    // Backfill: create ProductImageUpload records for any workSamples not yet registered
-    if (crafter.workSamples && crafter.workSamples.length > 0) {
-      const existing = await prisma.productImageUpload.findMany({
-        where: { crafterId: crafter.id },
-        select: { imageUrl: true },
-      });
-      const existingUrls = new Set(existing.map((u) => u.imageUrl));
-      const missing = crafter.workSamples.filter((url) => !existingUrls.has(url));
-      if (missing.length > 0) {
-        await prisma.productImageUpload.createMany({
-          data: missing.map((imageUrl) => ({
-            crafterId: crafter.id,
-            imageUrl,
-            status: 'PENDING',
-          })),
-          skipDuplicates: true,
-        });
-      }
-    }
 
     const uploadCheck = await canUploadMore(crafter.id);
 
@@ -236,6 +217,12 @@ export async function getPendingImageUploads(): Promise<{
     const uploads = await prisma.productImageUpload.findMany({
       where: {
         status: { in: ['PENDING', 'REJECTED'] },
+        // Only show uploads where the crafter has submitted complete details
+        costPrice: { gt: 0 },
+        weight: { gt: 0 },
+        height: { gt: 0 },
+        width: { gt: 0 },
+        depth: { gt: 0 },
       },
       include: {
         crafter: {

@@ -353,6 +353,28 @@ function ImageApprovalCard({ upload, onUpdate }: { upload: ImageUpload; onUpdate
               >
                 {processing ? 'Processing...' : 'Reject'}
               </Button>
+              <Button
+                onClick={async () => {
+                  if (!confirm('Delete this upload permanently?')) return;
+                  setProcessing(true);
+                  try {
+                    const res = await fetch(`/api/admin/image-approvals/${upload.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast.success('Upload deleted');
+                      onUpdate();
+                    } else {
+                      toast.error(data.error || 'Failed to delete');
+                    }
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+                disabled={processing}
+                variant='outline'
+              >
+                Delete
+              </Button>
             </div>
 
             <div className='space-y-2'>

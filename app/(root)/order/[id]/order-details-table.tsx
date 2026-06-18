@@ -26,9 +26,11 @@ import {
     createYocoOrder,
     verifyYocoOrder,
     updateOrderToPaidByCOD,
-    deliverOrder } from "@/lib/actions/order.actions";
+    deliverOrder,
+    setOrderCourierStatus } from "@/lib/actions/order.actions";
+import { bookOrderShipment } from "@/lib/actions/courier.actions";
 import { toast } from "sonner";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -242,6 +244,78 @@ const OrderDetailsTable = ({
         );
     };
     
+    // DEV ONLY — simulate Shiplogic status for sandbox testing
+    const SimulateStatusPanel = () => {
+        const [status, setStatus] = useState('in-transit');
+        const [isPending, startTransition] = useTransition();
+        const statuses = [
+            { value: 'Submitted',            label: 'Submitted' },
+            { value: 'Assigned to courier',  label: 'Assigned to courier' },
+            { value: 'Collected from sender', label: 'Collected from sender' },
+            { value: 'In transit',           label: 'In transit' },
+            { value: 'Out for delivery',     label: 'Out for delivery' },
+            { value: 'Delivered',            label: 'Delivered' },
+            { value: 'Delivery failed',      label: 'Delivery failed' },
+        ];
+        return (
+            <div className="mt-4 p-3 rounded-md border border-dashed border-yellow-400 bg-yellow-50 space-y-2 text-sm">
+                <p className="font-semibold text-yellow-800">⚙ Dev: Simulate courier status</p>
+                <div className="flex gap-2">
+                    <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="flex-1 rounded border px-2 py-1 text-sm"
+                    >
+                        {statuses.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                    </select>
+                    <Button
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() =>
+                            startTransition(async () => {
+                                const res = await setOrderCourierStatus(order.id, status);
+                                if (res.success) {
+                                    toast.success(res.message);
+                                    router.refresh();
+                                } else {
+                                    toast.error(res.message);
+                                }
+                            })
+                        }
+                    >
+                        {isPending ? 'Applying...' : 'Apply'}
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
+    // Button to request courier collection (admin only — only after items are at collection point)
+    const BookCollectionButton = () => {
+        const [isPending, startTransition] = useTransition();
+        return (
+        <Button
+            type='button'
+            disabled={isPending}
+            onClick={() =>
+            startTransition(async () => {
+                const res = await bookOrderShipment(order.id);
+                if (res.success) {
+                    toast.success('Courier collection booked — waybill generated');
+                    router.refresh();
+                } else {
+                    toast.error(res.error || 'Failed to book collection');
+                }
+            })
+            }
+        >
+            {isPending ? 'Booking...' : 'Book Courier Collection'}
+        </Button>
+        );
+    };
+
     // Button To mark the order as delivered
     const MarkAsDeliveredButton = () => {
         const [isPending, startTransition] = useTransition();
@@ -315,9 +389,17 @@ const OrderDetailsTable = ({
                             <Badge variant="outline" className="border-blue-400 text-blue-700">
                                 {courierStatus}
                             </Badge>
+                        ) : waybillNumber ? (
+                            <Badge variant="outline" className="border-blue-400 text-blue-700">
+                                Collection booked
+                            </Badge>
+                        ) : isPaid ? (
+                            <Badge variant="outline" className="text-muted-foreground">
+                                Preparing for collection
+                            </Badge>
                         ) : (
                             <Badge variant="outline" className="text-muted-foreground">
-                                Awaiting collection
+                                Awaiting payment
                             </Badge>
                         )}
                         {(waybillNumber || trackingNumber) && (
@@ -491,7 +573,9 @@ const OrderDetailsTable = ({
 
                         { /* Cash On Delivery */ }
                         { isAdmin && !isPaid && (<MarkAsPaidButton />) }
+                        { isAdmin && isPaid && !waybillNumber && <BookCollectionButton /> }
                         { isAdmin && isPaid && !isDelivered && <MarkAsDeliveredButton /> }
+                        { isAdmin && process.env.NODE_ENV === 'development' && <SimulateStatusPanel /> }
                     </CardContent>
                 </Card>
             </div>
