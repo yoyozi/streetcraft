@@ -13,9 +13,11 @@ import { PasswordInputFormField } from "@/components/ui/password-input";
 import { updateProfile, changePassword } from "@/lib/actions/user.actions";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CrafterProfileImage from './crafter-profile-image';
 
 const Profileform = () => {
-    const { data: session, update } = useSession();
+    const { data: session, status, update } = useSession();
+    const isCrafter = status === 'authenticated' && session?.user?.role === 'craft';
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     
     // Profile update form
@@ -72,8 +74,9 @@ const Profileform = () => {
 
     return (
         <div className="space-y-6">
-            {/* Profile Update Card */}
-            <Card>
+            {isCrafter && <CrafterProfileImage />}
+            {/* Profile Update Card — hidden for crafters (their details are managed via admin) */}
+            {!isCrafter && <Card>
                 <CardHeader>
                     <CardTitle>Profile Information</CardTitle>
                 </CardHeader>
@@ -122,7 +125,7 @@ const Profileform = () => {
                         </form>
                     </FormUI>
                 </CardContent>
-            </Card>
+            </Card>}
 
             {/* Password Change Card */}
             <Card>

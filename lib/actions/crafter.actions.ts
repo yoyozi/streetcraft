@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkAdminAuth } from './auth-actions';
+import { auth } from '@/auth';
 import { UTApi } from 'uploadthing/server';
 import { hashSync } from 'bcrypt-ts-edge';
 
@@ -582,5 +583,23 @@ export async function removeWorkSample(crafterId: string, imageUrl: string) {
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to remove work sample' };
+  }
+}
+
+// UPDATE CRAFTER PROFILE IMAGE (Crafter self-service)
+export async function updateCrafterProfileImage(imageUrl: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'craft') {
+    return { success: false, error: 'Unauthorized' };
+  }
+  try {
+    await prisma.crafter.update({
+      where: { userId: session.user.id },
+      data: { profileImage: imageUrl },
+    });
+    revalidatePath('/user/profile');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to update profile image' };
   }
 }

@@ -26,6 +26,7 @@ import { getAllCraftersForDrop } from '@/lib/actions/product.actions';
   import { Textarea } from '@/components/ui/textarea';
   import { Button } from '@/components/ui/button';
   import { UploadButton } from '@/lib/uploadthing';
+import { optimizeImages } from '@/lib/image-optimizer';
 
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
@@ -535,22 +536,16 @@ import {
                         <FormControl>
                           <UploadButton
                             endpoint='imageUploader'
+                            onBeforeUploadBegin={(files) => optimizeImages(files)}
                             onClientUploadComplete={(res: { url: string }[]) => {
                               const imageUrl = res[0].url;
                               const currentImages = form.getValues('images') || [];
                               const newImages = [...currentImages, imageUrl];
                               form.setValue('images', newImages, { shouldValidate: true, shouldDirty: true });
-                              console.log('Image uploaded:', imageUrl);
-                              console.log('All images:', newImages);
                               toast.success('Image uploaded successfully');
-                              
-                              // Optimize in background and update form with new URL
-                              optimizeImageInBackground(imageUrl, newImages.length - 1);
                             }}
                             onUploadError={(error: Error) => {
                               toast.error(`ERROR! ${error.message}`);
-                                
-                              
                             }}
                           />
                         </FormControl>
@@ -697,29 +692,6 @@ import {
       </Form>
     );
 
-  // Background optimization function
-  const optimizeImageInBackground = async (imageUrl: string, imageIndex: number) => {
-    try {
-      const response = await fetch('/api/optimize-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl }),
-      });
-      
-      const result = await response.json();
-      if (result.success && result.newUrl) {
-        // Update the form with the new optimized URL
-        const currentImages = form.getValues('images') || [];
-        if (currentImages[imageIndex] === result.oldUrl) {
-          currentImages[imageIndex] = result.newUrl;
-          form.setValue('images', currentImages, { shouldValidate: true, shouldDirty: true });
-          console.log('Image optimized and URL updated:', result);
-        }
-      }
-    } catch (error) {
-      console.warn('Background optimization failed:', error);
-    }
-  };
 }
 
 export default ProductForm;

@@ -77,7 +77,7 @@ export const DEFAULT_PAYMENT_METHOD = process.env.DEFAULT_PAYMENT_METHOD || 'EFT
 
 export const PAGE_SIZE = Number(process.env.PAGE_SIZE) || 12;
 
-export const SENDER_EMAIL = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+export const SENDER_EMAIL = process.env.SENDER_EMAIL || 'info@streetcraft.co.za';
 
 // EFT Banking Details
 export const EFT_BANK_NAME = process.env.EFT_BANK_NAME || 'Bank Name';

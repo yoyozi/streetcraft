@@ -38,6 +38,23 @@ export const ourFileRouter = {
       return { url: file.ufsUrl };
     }),
 
+  // Crafter profile image upload (requires craft role)
+  crafterProfileImage: f({
+    image: {
+      maxFileSize: '4MB',
+      maxFileCount: 1,
+    },
+  })
+    .middleware(async () => {
+      const session = await auth();
+      if (!session) throw new UploadThingError('Unauthorized');
+      if (session.user?.role !== 'craft') throw new UploadThingError('Only crafters can upload a profile image');
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { url: file.ufsUrl };
+    }),
+
   // Crafter product image upload (requires craft role)
   crafterProductImage: f({
     image: {
