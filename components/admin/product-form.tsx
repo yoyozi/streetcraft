@@ -517,11 +517,11 @@ import {
                               />
                               <button
                                 type='button'
-                                onClick={() => {
-                                  // Remove from form UI only (actual deletion from UploadThing happens on save)
+                                onClick={async () => {
                                   const currentImages = form.getValues('images') || [];
                                   form.setValue('images', currentImages.filter((img: string) => img !== image), { shouldValidate: true, shouldDirty: true });
-                                  toast.success('Image removed from product');
+                                  await deleteProductImages([image]);
+                                  toast.success('Image removed');
                                 }}
                                 className='absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs'
                                 title='Remove image'
@@ -536,7 +536,7 @@ import {
                         <FormControl>
                           <UploadButton
                             endpoint='imageUploader'
-                            onBeforeUploadBegin={(files) => optimizeImages(files)}
+                            onBeforeUploadBegin={(files) => optimizeImages(files, { maxWidth: 1200, maxHeight: 1200, quality: 0.75, mimeType: 'image/webp' })}
                             onClientUploadComplete={(res: { url: string }[]) => {
                               const imageUrl = res[0].url;
                               const currentImages = form.getValues('images') || [];

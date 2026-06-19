@@ -20,9 +20,9 @@ export interface OptimizeImageOptions {
 }
 
 const DEFAULT_OPTIONS: Required<OptimizeImageOptions> = {
-  maxWidth: 1600,
-  maxHeight: 1600,
-  quality: 0.82,
+  maxWidth: 1200,
+  maxHeight: 1200,
+  quality: 0.75,
   mimeType: 'image/webp',
 };
 
@@ -125,13 +125,25 @@ export async function optimizeImage(
       source.close();
     }
 
-    const blob = await canvasToBlob(canvas, opts.mimeType, opts.quality);
+    let blob = await canvasToBlob(canvas, opts.mimeType, opts.quality);
+
+    // Fallback to JPEG if WebP is unsupported (canvas.toBlob returns null)
+    if (!blob && opts.mimeType === 'image/webp') {
+      blob = await canvasToBlob(canvas, 'image/jpeg', opts.quality);
+    }
+
+    console.log(
+      `[image-optimizer] ${file.name}: ${(file.size / 1024).toFixed(0)}KB` +
+      ` (${sourceWidth}x${sourceHeight}) → ` +
+      (blob ? `${(blob.size / 1024).toFixed(0)}KB (${width}x${height}) [${blob.type}]` : 'null blob')
+    );
+
     if (!blob || blob.size >= file.size) {
-      // No saving (e.g. already smaller); keep original to avoid quality loss.
+      console.log('[image-optimizer] No saving achieved, returning original');
       return file;
     }
 
-    return new File([blob], renameExtension(file.name, opts.mimeType), {
+    return new File([blob], renameExtension(file.name, blob.type === 'image/jpeg' ? 'image/jpeg' : opts.mimeType), {
       type: blob.type,
       lastModified: Date.now(),
     });
