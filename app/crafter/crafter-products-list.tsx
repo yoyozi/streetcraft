@@ -355,7 +355,7 @@ export default function CrafterProductsList({ crafterName }: CrafterProductsList
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          {product.needsCompletion ? (
+          {(product.needsCompletion || !product.weight || !product.height || !product.width || !product.depth || !product.costPrice) ? (
             <CompletionForm product={product} onUpdate={() => mutate()} />
           ) : (
             <>

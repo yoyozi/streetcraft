@@ -24,11 +24,11 @@ export async function PATCH(
     }
 
     const product = await prisma.product.findFirst({
-      where: { id, crafterId: crafter.id, needsCompletion: true },
+      where: { id, crafterId: crafter.id },
     });
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found or already complete' }, { status: 404 });
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
     const body = await request.json();

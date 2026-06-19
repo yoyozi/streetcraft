@@ -537,8 +537,8 @@ import {
                           <UploadButton
                             endpoint='imageUploader'
                             onBeforeUploadBegin={(files) => optimizeImages(files, { maxWidth: 1200, maxHeight: 1200, quality: 0.75, mimeType: 'image/webp' })}
-                            onClientUploadComplete={(res: { url: string }[]) => {
-                              const imageUrl = res[0].url;
+                            onClientUploadComplete={(res: { ufsUrl: string }[]) => {
+                              const imageUrl = res[0].ufsUrl;
                               const currentImages = form.getValues('images') || [];
                               const newImages = [...currentImages, imageUrl];
                               form.setValue('images', newImages, { shouldValidate: true, shouldDirty: true });
